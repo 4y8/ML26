@@ -1,0 +1,126 @@
+\documentclass[sigplan, nonacm=true, natbib=false]{acmart}
+
+\usepackage{listings}
+
+\lstset{
+  basicstyle=\ttfamily\footnotesize,
+  columns=fullflexible,
+  keepspaces=true
+}
+
+\lstdefinestyle{metl}{
+  language=[Objective]Caml,
+  morekeywords={eff, handle, end, return, mask, forall, Effect},
+  morecomment=[l]{--},
+  literate=
+    {->}{{$\to$}}2
+    {=>}{{$\Rightarrow$}}2
+    {()}{{()}}2
+}
+
+\lstdefinestyle{koka}{
+  morekeywords={fun,rec,handler,forall},
+  sensitive=true,
+  morecomment=[l]{--},
+  morestring=[b]",
+  literate=
+    {->}{{$\to$}}2
+    {()}{{()}}2
+}
+
+\usepackage[backend=bibtex, style=alphabetic]{biblatex}
+\addbibresource{abstract.bib}
+\renewcommand*{\bibfont}{\footnotesize}
+
+\title{Practical programming with Modal Effect Types (Research Presentation)}
+\author{}
+\keywords{effect handlers, effect types, modal types, type inference,
+  first-class polymorphism}
+
+\begin{document}
+
+\begin{abstract}
+  Effect handlers are gaining in popularity and existing languages start
+  supporting them. However, existing type-and-effect systems lack either
+  backward compatibility or robustness.
+
+  We overview our implementation of a toy ML-like language supporting effects
+  trying to solve both of these shortcomings. To do so, it combines modal effect
+  types and a new type inference algorithm for first-class polymorphism.
+\end{abstract}
+\maketitle
+\section{Introduction}
+\subsection{Existing type-and-effect systems}
+To take effects into account in the type system, traditional languages such as
+\textsf{Koka}~\cite{koka2014} annotate arrows with the effects the function can
+perform. Thus, each function inherits, in its signature, the effects of its
+callees. This becomes cumbersome when typing higher-order functions and is an
+obstacle to backward compatibility. For instance, in \textsf{Koka}, the function
+\textsf{map} has the following type, even though it does not perform effects
+itself.
+\begin{lstlisting}[style=koka]
+  forall <a, b, e> . (list<a>, (a) -> e b) -> e list<b>
+\end{lstlisting}
+
+TODO: \textsf{Frank}~\cite{frank2020}
+
+The language \textsf{Effekt}~\cite{effekt2020} answers this problem with a
+\emph{capability} based system. However, to guarantee effect-safety, functions
+become second-class objects, hindering backward compatibilty.
+
+\subsection{Modal Effect Types}
+\textsf{\textsc{Met}}~\cite{tang2025modal, tang2026modal} draws inspiration from
+Multimodal Type Theory~\cite{mtt2020} and represents effects a computation can
+perform with \emph{modalities}. For instance, the \textsf{map} function has the
+following type, where the modality \textsf{[]} indicates that the function does
+not perform any effect.
+\begin{lstlisting}[style=metl]
+  [](forall a b . (a -> b) -> list a -> list b)
+\end{lstlisting}
+
+As modalities require explicit boxing and unboxing, one needs an inference
+algorithm to turn \textsf{\textsc{Met}} into a programming language. The
+original paper~\cite{tang2025modal} provides such an algorithm. But it only
+deals with modalities and requires explicit type application.
+
+\subsection{Frost}
+As noted in previous work on \textsf{\textsc{Met}}, elimination and introduction
+of modalities remind instantiation and generalisation~\cite[Section
+  7]{tang2025modal}. \textsf{Frost} is a new bidirectionnal type inference
+algorithm for first-class polymorphism which makes formal this parallel. This is
+possible because \textsf{Frost} relies on \emph{skeleton} inference. Skeletons
+are types with \emph{ghosts} and \emph{universal ghosts} that the algorithm will
+fill with other skeletons, or quantifiers and modalities for the universal ones.
+
+\section{Type inference for Modal Effect Types}
+\subsection{Examples}
+\subsection{Cooperative concurrency}
+
+\begin{lstlisting}[style=metl]
+  forall (e : Effect) . [queue [e]{unit}, e]([co e, queue (proc e), e]{unit} -> unit)
+\end{lstlisting}
+\begin{lstlisting}[style=metl]
+  [queue {unit}](<coop>{unit} -> unit)
+\end{lstlisting}
+For now, we lack a proof of safety and an expressivity result relating this
+system with traditional \textsf{\textsc{Met}}.
+\subsection{Some limitations}
+Our current unification rules have a syntactical treatment of quantifiers. Thus
+we can unify neither \lstinline[style=metl]{[l]<l'>(unit -> unit)} and
+\lstinline[style=metl]{[l', l](unit -> unit)},
+nor \lstinline[style=metl]{forall a b . a * b}
+and \lstinline[style=metl]{forall b a . a * b}, while they are both subtype of eachother in both cases.
+
+Lack of kind inference
+\begin{lstlisting}[style=metl]
+let find p l =
+  handle iter (fun x -> if mask<gen> (p x) then do yield x else ()) l with
+  | return _ => None
+  | yield x k => Some (x)
+  end
+\end{lstlisting}
+\subsection{Future work}
+\printbibliography
+\end{document}
+
+
