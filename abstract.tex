@@ -1,4 +1,4 @@
-\documentclass[sigplan, nonacm=true, natbib=false]{acmart}
+\documentclass[sigplan, nonacm = true, natbib = false]{acmart}
 
 \usepackage{listings}
 
@@ -10,7 +10,7 @@
 
 \lstdefinestyle{metl}{
   language=[Objective]Caml,
-  morekeywords={eff, handle, end, return, mask, forall, Effect},
+  morekeywords={eff, handle, end, return, mask, forall, Effect, alias},
   morecomment=[l]{--},
   literate=
     {->}{{$\to$}}2
@@ -28,9 +28,45 @@
     {()}{{()}}2
 }
 
-\usepackage[backend=bibtex, style=alphabetic]{biblatex}
+\usepackage[backend=bibtex, style=numeric]{biblatex}
 \addbibresource{abstract.bib}
 \renewcommand*{\bibfont}{\footnotesize}
+
+%% Ghosts
+
+\usepackage{halloweenmath}
+\makeatletter
+\newcommand*\forallghostraise{.16ex} % vertical nudge upwards
+\newcommand*\forallscale{0.4}       % scale factor for ∀
+
+\newcommand{\forallghost}{\mathord{\mathpalette\forallghost@{}}}
+\newcommand{\forallghost@}[2]{%
+  \ooalign{%
+    % ghost outline
+    \hfil$\m@th#1\mathpalette\raiseghost\relax$\hfil\cr
+    % smaller forall symbol, raised
+    \hfil\raise\forallghostraise\hbox{%
+      \scalebox{\forallscale}{$\m@th#1\forall$}}%
+    \hfil\cr
+  }%
+}
+
+\makeatother
+
+
+\newcommand{\myghost}{\mathpalette\raiseghost\relax}
+\newcommand{\raiseghost}[2]{\raisebox{.5\depth}{\scalebox{0.9}{$#1\mathghost$}}}
+
+\newcommand{\Hole}{{\myghost}}
+\newcommand{\TopHole}{\forallghost} % implicit forall
+
+%%
+
+%% Keywords
+
+\newcommand{\keyw}[1]{{\textbf{{\textsf{#1}}}}}
+\newcommand{\Do}{\keyw{do}\;}
+%%
 
 \title{Practical programming with Modal Effect Types (Research Presentation)}
 \author{}
@@ -38,7 +74,7 @@
   first-class polymorphism}
 
 \begin{document}
-
+\sloppy
 \begin{abstract}
   Effect handlers are gaining in popularity and existing languages start
   supporting them. However, existing type-and-effect systems lack either
@@ -61,8 +97,8 @@ itself.
 \begin{lstlisting}[style=koka]
   forall <a, b, e> . (list<a>, (a) -> e b) -> e list<b>
 \end{lstlisting}
-
-TODO: \textsf{Frank}~\cite{frank2020}
+Syntactic sugar can simplify such signatures, as demonstrated by
+Frank~\cite{frank2020}. But, relying on syntax makes the system fragile.
 
 The language \textsf{Effekt}~\cite{effekt2020} answers this problem with a
 \emph{capability} based system. However, to guarantee effect-safety, functions
@@ -85,25 +121,99 @@ deals with modalities and requires explicit type application.
 
 \subsection{Frost}
 As noted in previous work on \textsf{\textsc{Met}}, elimination and introduction
-of modalities remind instantiation and generalisation~\cite[Section
-  7]{tang2025modal}. \textsf{Frost} is a new bidirectionnal type inference
-algorithm for first-class polymorphism which makes formal this parallel. This is
-possible because \textsf{Frost} relies on \emph{skeleton} inference. Skeletons
-are types with \emph{ghosts} and \emph{universal ghosts} that the algorithm will
-fill with other skeletons, or quantifiers and modalities for the universal ones.
+of modalities remind instantiation and generalisation in type
+inference~\cite[Section 7]{tang2025modal}. \textsf{Frost} is a new
+bidirectionnal type inference algorithm for first-class polymorphism which makes
+formal this parallel. This is possible because \textsf{Frost} relies on
+\emph{skeleton} inference. Skeletons are types haunted by \emph{ghosts}
+($\Hole$) and \emph{universal ghosts} ($\TopHole$). The algorithm will fill the
+former with other skeletons, and the latter with quantifiers and modalities.
 
 \section{Type inference for Modal Effect Types}
+\subsection{Programming with \textsf{\textsc{Met}}}
+We give an overview of \textsf{\textsc{Met}} with scoped
+rows~\cite{scopedrows2005} as an effect structure (i.e.\ our modalities will
+have scoped rows of effects). TO CONTINUE
+
+All typing judgements take a row of effects as input called the \emph{ambient
+effect context} which indicates the effects the current computation can
+perform. For instance, the expression $\Do \textsf{yield } 1$ is well-typed in
+the effect context $\textsf{gen int}$, where \lstinline[style=metl]{eff gen [a] = yield : a => unit}.
+The brackets around the type parameter \textsf{a} indicate that it has kind
+\textsf{Abs}: the kind of types whose meaning does not depend on the ambient
+effect context. To avoid leakage, the types of inputs and outputs of operation
+have kind \textsf{Abs}.
+
+\emph{Modalities} $\mu$ can change the ambient effect contexts: either by
+replacing it by an independant one (absolute modalities: $[E]$), or by removing
+and adding some effects (relative modalities: $\langle L|D\rangle$). The
+$\keyw{mod}_\mu$ and $\keyw{let mod}_\mu$ constructs respectively introduce and
+eliminate modalities. For example, this expression performs explicit
+subeffecting of a variable $x:[](\textsf{int} \to\textsf{int})$:
+\[
+\left(\keyw{let mod}_{[]} y = x \keyw{ in } \keyw{mod}_{[E]}y\right) : [E](\textsf{int} \to\textsf{int}).
+\]
+
+Handlers also modify the effect context of the expression they encompass, to add
+the effects they handle. In an empty effect context, this expression is
+well-typed:
+\[
+\keyw{handle } (\Do \textsf{yield } 1) \keyw{ with }\{\textsf{yield } k\; n
+\Rightarrow n \} : \textsf{int}.
+\]
+\subsection{Parallel between modalities and quantifiers}
+For subtyping, \textsf{Frost} relies on the broom
 \subsection{Examples}
 \subsection{Cooperative concurrency}
+Cooperative concurrency effect is an effect with two operations with signatures
+that look like \lstinline[style=metl]{fork : (unit -> unit) => unit} and
+\lstinline[style=metl]{suspend : unit => unit}. Implementing a scheduler for
+such an effect serves as a test for compositionality~\cite[Section~6]{frank2020}
+and expressivity~\cite[Section~2.10]{tang2025modal} of an effect system.
+
+To implement this example in \textsf{\textsc{Met}}, one can add effect
+polymorphism to the language. This allows to give pure types to the argument of
+fork.
+\begin{lstlisting}[style=metl]
+  eff co (e : Effect) = fork : [co e, e]{unit} => unit
+                      | suspend : unit => unit
+\end{lstlisting}
+
+However, if the scheduler uses another effect \lstinline[style=metl]{queue} to
+manage the running functions, it has type
 
 \begin{lstlisting}[style=metl]
-  forall (e : Effect) . [queue [e]{unit}, e]([co e, queue (proc e), e]{unit} -> unit)
+  forall (e : Effect) .
+    [qproc e] ([co e, qproc e]{unit} -> unit),
 \end{lstlisting}
+in presence of the following definitions 
 \begin{lstlisting}[style=metl]
-  [queue {unit}](<coop>{unit} -> unit)
+  type proc (e : Effect) = Proc of [queue (proc e), e]{unit}
+  alias qproc e = queue (proc e), e.
 \end{lstlisting}
+This type signature reminds traditional type-and-effect systems and looks like a
+desugared version of a \textsf{Frank} type. Moreover, the implementation relies
+on a \emph{modality-parametrised handler}~\cite[Section~3.5]{tang2026modal} to
+give a type with an absolute modality to the continuation, making it even more
+cumbersome.
+
+REWRITE These problems motivate the search of other ways to express higher-order
+effects. We have implemented a promising approach: relax kind restrictions on
+operations' operands, but restrict effect subtyping in presence of operations
+with non-pure operands. This means that $l, l',D\leq l', l,D$ if, and only if
+$l'$ is not higher-order, and that one can perform an operation from a
+higher-order effect if, and only if it is the first entry in the effect
+context. We conjecture that these restrictions guarantee type safety by ensuring
+that values coming from higher-order effects stay in a fixed effect
+context. With these rules, the scheduler has the following type, where
+\lstinline[style=metl]{queue} and \lstinline[style=metl]{co} are higher-order,
+and it does not rely on modality-parametrised handler.
+\begin{lstlisting}[style=metl]
+  [queue {unit}](<co>{unit} -> unit)
+\end{lstlisting}
+
 For now, we lack a proof of safety and an expressivity result relating this
-system with traditional \textsf{\textsc{Met}}.
+system with effect polymorphism.
 \subsection{Some limitations}
 Our current unification rules have a syntactical treatment of quantifiers. Thus
 we can unify neither \lstinline[style=metl]{[l]<l'>(unit -> unit)} and
