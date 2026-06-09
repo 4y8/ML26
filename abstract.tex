@@ -1,4 +1,4 @@
-\documentclass[sigplan, nonacm = true, natbib = false]{acmart}
+\documentclass[sigplan, nonacm = true, natbib = false, review = true]{acmart}
 
 \usepackage{listings}
 
@@ -31,6 +31,8 @@
 \usepackage[backend=bibtex, style=numeric]{biblatex}
 \addbibresource{abstract.bib}
 \renewcommand*{\bibfont}{\footnotesize}
+
+\usepackage{mathpartir}
 
 %% Ghosts
 
@@ -88,10 +90,10 @@
 \section{Introduction}
 \subsection{Existing type-and-effect systems}
 To take effects into account in the type system, traditional languages such as
-\textsf{Koka}~\cite{koka2014} annotate arrows with the effects the function can
+Koka~\cite{koka2014} annotate arrows with the effects the function can
 perform. Thus, each function inherits, in its signature, the effects of its
 callees. This becomes cumbersome when typing higher-order functions and is an
-obstacle to backward compatibility. For instance, in \textsf{Koka}, the function
+obstacle to backward compatibility. For instance, in Koka, the function
 \textsf{map} has the following type, even though it does not perform effects
 itself.
 \begin{lstlisting}[style=koka]
@@ -100,56 +102,42 @@ itself.
 Syntactic sugar can simplify such signatures, as demonstrated by
 Frank~\cite{frank2020}. But, relying on syntax makes the system fragile.
 
-The language \textsf{Effekt}~\cite{effekt2020} answers this problem with a
+The language Effekt~\cite{effekt2020} answers this problem with a
 \emph{capability} based system. However, to guarantee effect-safety, functions
 become second-class objects, hindering backward compatibilty.
 
 \subsection{Modal Effect Types}
-\textsf{\textsc{Met}}~\cite{tang2025modal, tang2026modal} draws inspiration from
+\textsc{Met}~\cite{tang2025modal, tang2026modal} draws inspiration from
 Multimodal Type Theory~\cite{mtt2020} and represents effects a computation can
 perform with \emph{modalities}. For instance, the \textsf{map} function has the
-following type, where the modality \textsf{[]} indicates that the function does
-not perform any effect.
+following type, where the modality \texttt{\small[]} indicates that the function
+does not perform any effect.
 \begin{lstlisting}[style=metl]
   [](forall a b . (a -> b) -> list a -> list b)
 \end{lstlisting}
 
 As modalities require explicit boxing and unboxing, one needs an inference
-algorithm to turn \textsf{\textsc{Met}} into a programming language. The
+algorithm to turn \textsc{Met} into a programming language. The
 original paper~\cite{tang2025modal} provides such an algorithm. But it only
 deals with modalities and requires explicit type application.
 
-\subsection{Frost}
-As noted in previous work on \textsf{\textsc{Met}}, elimination and introduction
-of modalities remind instantiation and generalisation in type
-inference~\cite[Section 7]{tang2025modal}. \textsf{Frost} is a new
-bidirectionnal type inference algorithm for first-class polymorphism which makes
-formal this parallel. This is possible because \textsf{Frost} relies on
-\emph{skeleton} inference. Skeletons are types haunted by \emph{ghosts}
-($\Hole$) and \emph{universal ghosts} ($\TopHole$). The algorithm will fill the
-former with other skeletons, and the latter with quantifiers and modalities.
-
-\section{Type inference for Modal Effect Types}
-\subsection{Programming with \textsf{\textsc{Met}}}
-We give an overview of \textsf{\textsc{Met}} with scoped
-rows~\cite{scopedrows2005} as an effect structure (i.e.\ our modalities will
-have scoped rows of effects). TO CONTINUE
+We give an overview of \textsc{Met} that shows the bits we want to infer.
 
 All typing judgements take a row of effects as input called the \emph{ambient
 effect context} which indicates the effects the current computation can
 perform. For instance, the expression $\Do \textsf{yield } 1$ is well-typed in
-the effect context $\textsf{gen int}$, where \lstinline[style=metl]{eff gen [a] = yield : a => unit}.
-The brackets around the type parameter \textsf{a} indicate that it has kind
-\textsf{Abs}: the kind of types whose meaning does not depend on the ambient
-effect context. To avoid leakage, the types of inputs and outputs of operation
-have kind \textsf{Abs}.
+the effect context $\textsf{gen int}$, where $\textsf{gen } [a] = \textsf{yield}
+: a \Rightarrow \textsf{unit}$.  The brackets around the type parameter
+\textsf{a} indicate that it has kind \textsf{Abs}: the kind of types whose
+meaning is independent from the ambient effect context. To avoid leakage, the
+types of inputs and outputs of operation have kind \textsf{Abs}.
 
-\emph{Modalities} $\mu$ can change the ambient effect contexts: either by
-replacing it by an independant one (absolute modalities: $[E]$), or by removing
-and adding some effects (relative modalities: $\langle L|D\rangle$). The
-$\keyw{mod}_\mu$ and $\keyw{let mod}_\mu$ constructs respectively introduce and
-eliminate modalities. For example, this expression performs explicit
-subeffecting of a variable $x:[](\textsf{int} \to\textsf{int})$:
+Modalities change the ambient effect contexts: either by replacing it
+by an independent one (absolute modalities: $[E]$), or by removing and adding
+some effects (relative modalities: $\langle L|D\rangle$). The $\keyw{mod}_\mu$
+and $\keyw{let mod}_\mu$ constructs respectively introduce and eliminate
+modality $\mu$. For example, this expression performs explicit subeffecting of a
+variable $x:[](\textsf{int} \to\textsf{int})$:
 \[
 \left(\keyw{let mod}_{[]} y = x \keyw{ in } \keyw{mod}_{[E]}y\right) : [E](\textsf{int} \to\textsf{int}).
 \]
@@ -161,59 +149,39 @@ well-typed:
 \keyw{handle } (\Do \textsf{yield } 1) \keyw{ with }\{\textsf{yield } k\; n
 \Rightarrow n \} : \textsf{int}.
 \]
-\subsection{Parallel between modalities and quantifiers}
-For subtyping, \textsf{Frost} relies on the broom
-\subsection{Examples}
-\subsection{Cooperative concurrency}
-Cooperative concurrency effect is an effect with two operations with signatures
-that look like \lstinline[style=metl]{fork : (unit -> unit) => unit} and
-\lstinline[style=metl]{suspend : unit => unit}. Implementing a scheduler for
-such an effect serves as a test for compositionality~\cite[Section~6]{frank2020}
-and expressivity~\cite[Section~2.10]{tang2025modal} of an effect system.
 
-To implement this example in \textsf{\textsc{Met}}, one can add effect
-polymorphism to the language. This allows to give pure types to the argument of
-fork.
-\begin{lstlisting}[style=metl]
-  eff co (e : Effect) = fork : [co e, e]{unit} => unit
-                      | suspend : unit => unit
-\end{lstlisting}
+\subsection{Frost type inference}
+The usual way to type check an application with a bidirectionnal type system is
+to, first, infer the type of the function and then use this type to check the
+argument~\cite{dunfield2013complete, greedy2023, jiang2025bidirectional}. Fewer
+type systems allow the information to flow from the argument to the
+function~\cite{pierce2000local, xie2018let}.
 
-However, if the scheduler uses another effect \lstinline[style=metl]{queue} to
-manage the running functions, it has type
+Frost supports information flow in both ways. To do so, the type system relies
+on skeletons. Skeletons are types haunted by \emph{ghosts} ($\Hole$) and
+\emph{universal ghosts} ($\TopHole$). When type checking an application, the
+rule infers a skeleton for the argument, use that skeleton to infer a type for
+the function and check the argument against the function type's argument. The
+simplified pseudo-rule below illustrates this approach.
+\begin{mathpar}
+  \inferrule*[Lab=\textsc{T-App}]
+  {
+    \\
+  }
+  {\\}
+\end{mathpar}
 
-\begin{lstlisting}[style=metl]
-  forall (e : Effect) .
-    [qproc e] ([co e, qproc e]{unit} -> unit),
-\end{lstlisting}
-in presence of the following definitions 
-\begin{lstlisting}[style=metl]
-  type proc (e : Effect) = Proc of [queue (proc e), e]{unit}
-  alias qproc e = queue (proc e), e.
-\end{lstlisting}
-This type signature reminds traditional type-and-effect systems and looks like a
-desugared version of a \textsf{Frank} type. Moreover, the implementation relies
-on a \emph{modality-parametrised handler}~\cite[Section~3.5]{tang2026modal} to
-give a type with an absolute modality to the continuation, making it even more
-cumbersome.
+As noted in previous work on \textsc{Met}, elimination and introduction of
+modalities remind instantiation and generalisation in type
+inference~\cite[Section 7]{tang2025modal}. Frost implements this parallel thanks
+to universal ghosts unify the treatment of modalities and quantifiers.
 
-REWRITE These problems motivate the search of other ways to express higher-order
-effects. We have implemented a promising approach: relax kind restrictions on
-operations' operands, but restrict effect subtyping in presence of operations
-with non-pure operands. This means that $l, l',D\leq l', l,D$ if, and only if
-$l'$ is not higher-order, and that one can perform an operation from a
-higher-order effect if, and only if it is the first entry in the effect
-context. We conjecture that these restrictions guarantee type safety by ensuring
-that values coming from higher-order effects stay in a fixed effect
-context. With these rules, the scheduler has the following type, where
-\lstinline[style=metl]{queue} and \lstinline[style=metl]{co} are higher-order,
-and it does not rely on modality-parametrised handler.
-\begin{lstlisting}[style=metl]
-  [queue {unit}](<co>{unit} -> unit)
-\end{lstlisting}
+\section{Practical programming with Modal Effect Types}
+\subsection{Our implementation}
+ with scoped
+rows~\cite{scopedrows2005} as an effect structure (i.e.\ our modalities will
+have scoped rows of effects). 
 
-For now, we lack a proof of safety and an expressivity result relating this
-system with effect polymorphism.
 \subsection{Some limitations}
 Our current unification rules have a syntactical treatment of quantifiers. Thus
 we can unify neither \lstinline[style=metl]{[l]<l'>(unit -> unit)} and
@@ -223,14 +191,17 @@ and \lstinline[style=metl]{forall b a . a * b}, while they are both subtype of e
 
 Lack of kind inference
 \begin{lstlisting}[style=metl]
-let find p l =
-  handle iter (fun x -> if mask<gen> (p x) then do yield x else ()) l with
-  | return _ => None
-  | yield x k => Some (x)
-  end
+  let find p l =
+    handle iter
+      (fun x -> if mask<gen> (p x) then do yield x else ())
+      l with
+    | return _ => None
+    | yield x k => Some (x)
+    end
 \end{lstlisting}
+
+Interleaving quantifiers.
 \subsection{Future work}
 \printbibliography
+
 \end{document}
-
-
