@@ -1,4 +1,4 @@
-\documentclass[sigplan, nonacm = true, natbib = false, review = true]{acmart}
+\documentclass[sigplan, nonacm = true, natbib = false, review = true, screen]{acmart}
 
 \usepackage{listings}
 
@@ -70,8 +70,60 @@
 \newcommand{\Do}{\keyw{do}\;}
 %%
 
+%% Margin notes.
+%% For submission, comment all the following lines out ...
+\paperwidth    =\dimexpr\paperwidth     + 4cm\relax
+\oddsidemargin =\dimexpr\oddsidemargin  + 2cm\relax
+\evensidemargin=\dimexpr\evensidemargin + 2cm\relax
+\marginparwidth=\dimexpr\marginparwidth + 2.2cm\relax
+\usepackage{todonotes,setspace}
+\newcommand{\todobox}[3]{{\todo[color=#1!20,bordercolor=#1!80]{%
+  \begin{spacing}{0.9}\footnotesize\textbf{#2:} #3\end{spacing}}}}
+\newcommand{\wenhao}[1]{\todobox{blue}{Wenhao}{#1}}
+\newcommand{\aghilas}[1]{\todobox{red}{Aghilas}{#1}}
+%% ... up to here
+
 \title{Practical programming with Modal Effect Types (Research Presentation)}
-\author{}
+\settopmatter{authorsperrow=5}
+
+\author{Aghilas Y. Boussaa}
+\orcid{0009-0005-5954-1711}
+\email{aghilas.boussaa@ens.fr}
+\affiliation{
+  \institution{École normale supérieure -- PSL}
+  \country{France}
+}
+
+\author{Wenhao Tang}
+\orcid{0009-0000-6589-3821}
+\email{wenhao.tang@ed.ac.uk}
+\affiliation{%
+  \institution{The University of Edinburgh}
+  \country{UK}
+}
+
+\author{Shengyi Jiang}
+\orcid{0000-0002-4443-0753}
+\email{syjiang@cs.hku.hk}
+\affiliation{%
+  \institution{The University of Hong Kong}
+  \country{China}
+}
+
+\author{Bruno C. d. S. Oliveira}
+\orcid{0000-0002-1846-7210}
+\email{bruno@cs.hku.hk}
+\affiliation{%
+  \institution{The University of Hong Kong}
+  \country{China}
+}
+
+\author{Sam Lindley}
+\orcid{0000-0002-1360-4714}
+\email{sam.lindley@ed.ac.uk}
+\affiliation{%
+  \institution{The University of Edinburgh}
+  \country{UK}}
 \keywords{effect handlers, effect types, modal types, type inference,
   first-class polymorphism}
 
@@ -174,33 +226,88 @@ simplified pseudo-rule below illustrates this approach.
 As noted in previous work on \textsc{Met}, elimination and introduction of
 modalities remind instantiation and generalisation in type
 inference~\cite[Section 7]{tang2025modal}. Frost implements this parallel thanks
-to universal ghosts unify the treatment of modalities and quantifiers.
+to universal ghosts that unify the treatment of modalities and quantifiers.
+
+We will review a toy programming language which combines Frost and modal effect
+types. Examples in the core language and our new languages will demonstrate the
+capabilities of the latter. Then, other examples will show some limitations of
+our implementation. More examples, as well as a test suite are available
+\href{https://github.com/4y8/modal-effect-types/tree/frost}{online}.
+
+We lack proofs of completeness and soudness of the system.
 
 \section{Practical programming with Modal Effect Types}
 \subsection{Our implementation}
- with scoped
+The core language of our implementation is \textsc{Met} with scoped
 rows~\cite{scopedrows2005} as an effect structure (i.e.\ our modalities will
-have scoped rows of effects). 
+have scoped rows of effects) and some additions such as parametric effects and
+algebraic data types.
 
-\subsection{Some limitations}
-Our current unification rules have a syntactical treatment of quantifiers. Thus
-we can unify neither \lstinline[style=metl]{[l]<l'>(unit -> unit)} and
-\lstinline[style=metl]{[l', l](unit -> unit)},
-nor \lstinline[style=metl]{forall a b . a * b}
-and \lstinline[style=metl]{forall b a . a * b}, while they are both subtype of eachother in both cases.
+\aghilas{remove or rephrase}
+\textsc{Met} has modality-annotated variable declarations in its contexts:
+$x:_\mu A$, where $A$ can also have a modality. For simplicity's sake, the
+source language has usual plain bindings, and unboxes all the modalities of
+variables.
+\subsection{Itering on a list}
+The standard iter higher-order function has type $\forall a . []((a \to
+\textsf{unit})\to \textsf{unit})$ in \textsc{Met}.
+\[
+\Lambda a^{\textsf{Any}}.\keyw{mod}_{[]}\lambda f^{a\to\textsf{unit}} l^{\textsf{list }a}.\keyw{match } l \keyw{ with }\textsf{Nil}\to () \mid \textsf{Cons}(hd, tl)\to
+\keyw{let mod}^{\langle\rangle}\_ = f hd \keyw{ in }
+\keyw{let mod}^{[]}i = \textsf{iter} \{ a \} \keyw{ in }
+i\; f\; tl
+\]
 
-Lack of kind inference
+The bidirectionnal type system of \textsc{Metl} avoids explicit modality unboxing.
 \begin{lstlisting}[style=metl]
+  val iter : forall a . []((a -> unit) -> list a -> unit)
+  let iter f l =
+    match l with
+    | Nil -> ()
+    | Cons (hd, tl) -> f hd; iter @a f tl
+    end
+\end{lstlisting}
+And Frost removes the type application.
+\begin{lstlisting}[style=metl]
+    | Cons (hd, tl) -> f hd; iter f tl
+\end{lstlisting}
+\subsection{Finding in a list with effects}
+Calling the iterator from the last subsection with an effectful function as
+argument can find an element in a list, thanks to the parametric effect below.
+\begin{lstlisting}[style=metl]
+  eff gen [a] = yield : a => unit
+\end{lstlisting}
+Once again, \textsc{Metl} eliminates the need of modality boxing and unboxing.
+\begin{lstlisting}[style=metl]
+  val find :
+    forall [a] . []((a -> bool) -> list a -> option a)
   let find p l =
-    handle iter
+    handle<gen a> iter @a
       (fun x -> if mask<gen> (p x) then do yield x else ())
       l with
     | return _ => None
     | yield x k => Some (x)
     end
 \end{lstlisting}
+The brackets that follow the \lstinline[style=metl]{handle} keyword provide a
+parameter for the effect \lstinline[style=metl]{gen}. Frost erases the need for
+this annotation as well as the explicit type application.
 
-Interleaving quantifiers.
+\subsection{Some limitations}
+Our current unification rules have a syntactical treatment of quantifiers. Thus
+we can unify neither \lstinline[style=metl]{[l]<l'>(unit -> unit)} and
+\lstinline[style=metl]{[l', l](unit -> unit)},
+nor \lstinline[style=metl]{forall a b . a * b} and
+\lstinline[style=metl]{forall b a . a * b}, while they are both subtype
+of eachother in both cases.
+
+The rule to infer lambda abstractions introduces a fresh type variable for the
+argument. As the system lacks kind inference, the kind of this variable is
+\textsf{Any} to be permissive. Therefore, functions that have to take pure
+values need an annotation. For instance, the \lstinline[style=metl]{find}
+function of the previous subsection does not type check without the top-level
+annotation because the variable \lstinline[style=metl]{x} is not pure.
+
 \subsection{Future work}
 \printbibliography
 
