@@ -132,11 +132,12 @@
 \begin{abstract}
   Effect handlers are gaining in popularity and existing languages start
   supporting them. However, existing type-and-effect systems lack either
-  backward compatibility or robustness.
+  backward compatibility or robustness. Modal effect types aim at solving both
+  issues but lack type inference.
 
-  We overview our implementation of a toy ML-like language supporting effects
-  trying to solve both of these shortcomings. To do so, it combines modal effect
-  types and a new type inference algorithm for first-class polymorphism.
+  We overview our implementation of a toy ML-like language that combines modal
+  effect types and Frost, a new type inference algorithm for first-class
+  polymorphism.
 \end{abstract}
 \maketitle
 \section{Introduction}
@@ -146,7 +147,7 @@ Koka~\cite{koka2014} annotate arrows with the effects the function can
 perform. Thus, each function inherits, in its signature, the effects of its
 callees. This becomes cumbersome when typing higher-order functions and is an
 obstacle to backward compatibility. For instance, in Koka, the function
-\textsf{map} has the following type, even though it does not perform effects
+\textsf{map} has the following type, even though it does not perform any effect
 itself.
 \begin{lstlisting}[style=koka]
   forall <a, b, e> . (list<a>, (a) -> e b) -> e list<b>
@@ -161,9 +162,10 @@ become second-class objects, hindering backward compatibilty.
 \subsection{Modal Effect Types}
 \textsc{Met}~\cite{tang2025modal, tang2026modal} draws inspiration from
 Multimodal Type Theory~\cite{mtt2020} and represents effects a computation can
-perform with \emph{modalities}. For instance, the \textsf{map} function has the
-following type, where the modality \texttt{\small[]} indicates that the function
-does not perform any effect.
+perform with \emph{effect contexts}; \emph{modalities} then modify effect
+contexts. For instance, the \textsf{map} function has the following type, where
+the modality \texttt{\small[]} indicates that the function does not perform any
+effect.
 \begin{lstlisting}[style=metl]
   [](forall a b . (a -> b) -> list a -> list b)
 \end{lstlisting}
@@ -173,7 +175,7 @@ algorithm to turn \textsc{Met} into a programming language. The
 original paper~\cite{tang2025modal} provides such an algorithm. But it only
 deals with modalities and requires explicit type application.
 
-We give an overview of \textsc{Met} that shows the bits we want to infer.
+We now give an overview of \textsc{Met} that shows the bits we want to infer.
 
 All typing judgements take a row of effects as input called the \emph{ambient
 effect context} which indicates the effects the current computation can
@@ -191,7 +193,7 @@ and $\keyw{let mod}_\mu$ constructs respectively introduce and eliminate
 modality $\mu$. For example, this expression performs explicit subeffecting of a
 variable $x:[](\textsf{int} \to\textsf{int})$:
 \[
-\left(\keyw{let mod}_{[]} y = x \keyw{ in } \keyw{mod}_{[E]}y\right) : [E](\textsf{int} \to\textsf{int}).
+\left(\keyw{let mod}_{[]} y = x \keyw{ in } \keyw{mod}_{[E]}y\right) : [E](\textsf{int} \to\textsf{int})
 \]
 
 Handlers also modify the effect context of the expression they encompass, to add
@@ -199,8 +201,9 @@ the effects they handle. In an empty effect context, this expression is
 well-typed:
 \[
 \keyw{handle } (\Do \textsf{yield } 1) \keyw{ with }\{\textsf{yield } k\; n
-\Rightarrow n \} : \textsf{int}.
+\Rightarrow n \} : \textsf{int}
 \]
+but needs an annotation to specify the parameter of the effect \textsf{gen}.
 
 \subsection{Frost type inference}
 The usual way to type check an application with a bidirectionnal type system is
@@ -210,11 +213,12 @@ type systems allow the information to flow from the argument to the
 function~\cite{pierce2000local, xie2018let}.
 
 Frost supports information flow in both ways. To do so, the type system relies
-on skeletons. Skeletons are types haunted by \emph{ghosts} ($\Hole$) and
-\emph{universal ghosts} ($\TopHole$). When type checking an application, the
-rule infers a skeleton for the argument, use that skeleton to infer a type for
-the function and check the argument against the function type's argument. The
-simplified pseudo-rule below illustrates this approach.
+on \emph{skeletons}. Skeletons are types haunted by \emph{ghosts} ($\Hole$) and
+\emph{universal ghosts} ($\TopHole$), i.e.\ skeletons are types with holes in
+type or quantifier position. When type checking an application, the rule infers
+a skeleton for the argument, use that skeleton to infer a type for the function
+and check the argument against the function type's argument. The simplified
+pseudo-rule below summarises this approach.
 \begin{mathpar}
   \inferrule*[Lab=\textsc{T-App}]
   {
@@ -234,7 +238,8 @@ capabilities of the latter. Then, other examples will show some limitations of
 our implementation. More examples, as well as a test suite are available
 \href{https://github.com/4y8/modal-effect-types/tree/frost}{online}.
 
-We lack proofs of completeness and soudness of the system.
+We lack proofs of completeness and soudness for the extension of Frost to modal
+effect types.
 
 \section{Practical programming with Modal Effect Types}
 \subsection{Our implementation}
@@ -253,12 +258,13 @@ The standard iter higher-order function has type $\forall a . []((a \to
 \textsf{unit})\to \textsf{unit})$ in \textsc{Met}.
 \[
 \Lambda a^{\textsf{Any}}.\keyw{mod}_{[]}\lambda f^{a\to\textsf{unit}} l^{\textsf{list }a}.\keyw{match } l \keyw{ with }\textsf{Nil}\to () \mid \textsf{Cons}(hd, tl)\to
-\keyw{let mod}^{\langle\rangle}\_ = f hd \keyw{ in }
-\keyw{let mod}^{[]}i = \textsf{iter} \{ a \} \keyw{ in }
+\keyw{let mod}^{\langle\rangle}\_ = f\; hd \keyw{ in }
+\keyw{let mod}^{[]}i = \textsf{iter}\; \{ a \} \keyw{ in }
 i\; f\; tl
 \]
 
-The bidirectionnal type system of \textsc{Metl} avoids explicit modality unboxing.
+The bidirectionnal type system of \textsc{Metl} avoids explicit modality
+unboxing.
 \begin{lstlisting}[style=metl]
   val iter : forall a . []((a -> unit) -> list a -> unit)
   let iter f l =
@@ -294,13 +300,15 @@ parameter for the effect \lstinline[style=metl]{gen}. Frost erases the need for
 this annotation as well as the explicit type application.
 
 \subsection{Some limitations}
+\paragraph{Syntactic treatment of quantifiers}
 Our current unification rules have a syntactical treatment of quantifiers. Thus
 we can unify neither \lstinline[style=metl]{[l]<l'>(unit -> unit)} and
-\lstinline[style=metl]{[l', l](unit -> unit)},
-nor \lstinline[style=metl]{forall a b . a * b} and
-\lstinline[style=metl]{forall b a . a * b}, while they are both subtype
-of eachother in both cases.
+\lstinline[style=metl]{[l', l](unit -> unit)}, nor
+\lstinline[style=metl]{forall a b . a * b} and
+\lstinline[style=metl]{forall b a . a * b}, while they are both subtype of
+eachother in both cases.
 
+\paragraph{Lack of kind inference}
 The rule to infer lambda abstractions introduces a fresh type variable for the
 argument. As the system lacks kind inference, the kind of this variable is
 \textsf{Any} to be permissive. Therefore, functions that have to take pure
@@ -309,6 +317,10 @@ function of the previous subsection does not type check without the top-level
 annotation because the variable \lstinline[style=metl]{x} is not pure.
 
 \subsection{Future work}
+Future work includes: taking effect contexts into account in skeleton inference;
+extending Frost to support a fragment of system $F^\omega$; and allowing
+commutation of type constructors and quantifiers when sound.
+
 \printbibliography
 
 \end{document}
