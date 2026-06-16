@@ -68,6 +68,10 @@
 
 \newcommand{\keyw}[1]{{\textbf{{\textsf{#1}}}}}
 \newcommand{\Do}{\keyw{do}\;}
+
+\usepackage{xspace}
+\newcommand{\Met}{\textsc{Met}\xspace}
+\newcommand{\Metl}{\textsc{Metl}\xspace}
 %%
 
 %% Margin notes.
@@ -160,7 +164,7 @@ The language Effekt~\cite{effekt2020} answers this problem with a
 become second-class objects, hindering backward compatibilty.
 
 \subsection{Modal Effect Types}
-\textsc{Met}~\cite{tang2025modal, tang2026modal} draws inspiration from
+\Met~\cite{tang2025modal, tang2026modal} draws inspiration from
 Multimodal Type Theory~\cite{mtt2020} and represents effects a computation can
 perform with \emph{effect contexts}; \emph{modalities} then modify effect
 contexts. For instance, the \textsf{map} function has the following type, where
@@ -171,11 +175,13 @@ effect.
 \end{lstlisting}
 
 As modalities require explicit boxing and unboxing, one needs an inference
-algorithm to turn \textsc{Met} into a programming language. The
-original paper~\cite{tang2025modal} provides such an algorithm. But it only
-deals with modalities and requires explicit type application.
+algorithm to turn \Met into a programming language. The original
+paper~\cite{tang2025modal} provides such an algorithm that translates a surface
+language called \Metl to \Met. But this algorithm only deals with modalities:
+\Metl requires explicit type application for value polymorphism.
 
-We now give an overview of \textsc{Met} that shows the bits we want to infer.
+We now give an overview of \Met that highlights the bits we want to
+infer. See~\cite{tang2025modal, tang2026modal} for a complete introduction.
 
 All typing judgements take a row of effects as input called the \emph{ambient
 effect context} which indicates the effects the current computation can
@@ -227,7 +233,7 @@ pseudo-rule below summarises this approach.
   {\\}
 \end{mathpar}
 
-As noted in previous work on \textsc{Met}, elimination and introduction of
+As noted in previous work on \Met, elimination and introduction of
 modalities remind instantiation and generalisation in type
 inference~\cite[Section 7]{tang2025modal}. Frost implements this parallel thanks
 to universal ghosts that unify the treatment of modalities and quantifiers.
@@ -243,28 +249,49 @@ effect types.
 
 \section{Practical programming with Modal Effect Types}
 \subsection{Our implementation}
-The core language of our implementation is \textsc{Met} with scoped
+The core language of our implementation is \Met with scoped
 rows~\cite{scopedrows2005} as an effect structure (i.e.\ our modalities will
 have scoped rows of effects) and some additions such as parametric effects and
 algebraic data types.
 
 \aghilas{remove or rephrase}
-\textsc{Met} has modality-annotated variable declarations in its contexts:
+\Met has modality-annotated variable declarations in its contexts:
 $x:_\mu A$, where $A$ can also have a modality. For simplicity's sake, the
 source language has usual plain bindings, and unboxes all the modalities of
 variables.
+
+Skeleton inference introduces universal ghosts when typing lambda
+abstractions. As any modality could replace these ghosts, effect contexts become
+arbitrary. For the sake of simplicity, skeleton inference does not use the
+ambient effect context.
 \subsection{Itering on a list}
 The standard iter higher-order function has type $\forall a . []((a \to
-\textsf{unit})\to \textsf{unit})$ in \textsc{Met}.
+\textsf{unit})\to \textsf{unit})$ in \Met. To call it, the function unboxes the
+absolute modality of $\textsf{iter}\, @a$, where the at sign indicates type
+application.
 \[
-\Lambda a^{\textsf{Any}}.\keyw{mod}_{[]}\lambda f^{a\to\textsf{unit}} l^{\textsf{list }a}.\keyw{match } l \keyw{ with }\textsf{Nil}\to () \mid \textsf{Cons}(hd, tl)\to
-\keyw{let mod}^{\langle\rangle}\_ = f\; hd \keyw{ in }
-\keyw{let mod}^{[]}i = \textsf{iter}\; \{ a \} \keyw{ in }
-i\; f\; tl
+\begin{aligned}
+\Lambda a^{\textsf{Any}}.\,
+&\keyw{mod}_{[]}.\lambda f^{a\to\textsf{unit}} l^{\textsf{list }a}. \\
+&\keyw{match } l \keyw{ with } \\
+&\quad \textsf{Nil} \to () \\
+&\quad \mid \textsf{Cons}(hd,tl) \to
+   \keyw{let\ mod}^{\langle\rangle}\_ = f\,hd \keyw{\ in } \\
+&\qquad\qquad
+   \keyw{let\ mod}^{[]} i = \textsf{iter}\, @a
+   \keyw{\ in } \\
+&\qquad\qquad
+   i\,f\,tl
+\end{aligned}
 \]
+%% \[
+%% \Lambda a^{\textsf{Any}}.\keyw{mod}_{[]}\lambda f^{a\to\textsf{unit}} l^{\textsf{list }a}.\keyw{match } l \keyw{ with }\textsf{Nil}\to () \mid \textsf{Cons}(hd, tl)\to
+%% \keyw{let mod}^{\langle\rangle}\_ = f\; hd \keyw{ in }
+%% \keyw{let mod}^{[]}i = \textsf{iter}\; \{ a \} \keyw{ in }
+%% i\; f\; tl
+%% \]
 
-The bidirectionnal type system of \textsc{Metl} avoids explicit modality
-unboxing.
+The bidirectionnal type system of \Metl avoids explicit modality unboxing.
 \begin{lstlisting}[style=metl]
   val iter : forall a . []((a -> unit) -> list a -> unit)
   let iter f l =
@@ -283,7 +310,7 @@ argument can find an element in a list, thanks to the parametric effect below.
 \begin{lstlisting}[style=metl]
   eff gen [a] = yield : a => unit
 \end{lstlisting}
-Once again, \textsc{Metl} eliminates the need of modality boxing and unboxing.
+Once again, \Metl eliminates the need of modality boxing and unboxing.
 \begin{lstlisting}[style=metl]
   val find :
     forall [a] . []((a -> bool) -> list a -> option a)
