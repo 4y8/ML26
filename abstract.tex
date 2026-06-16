@@ -148,16 +148,18 @@
 \subsection{Existing type-and-effect systems}
 To take effects into account in the type system, traditional languages such as
 Koka~\cite{koka2014} annotate arrows with the effects the function can
-perform. Thus, each function inherits, in its signature, the effects of its
+perform. Therefore, each function inherits, in its signature, the effects of its
 callees. This becomes cumbersome when typing higher-order functions and is an
-obstacle to backward compatibility. For instance, in Koka, the function
-\textsf{map} has the following type, even though it does not perform any effect
-itself.
-\begin{lstlisting}[style=koka]
-  forall <a, b, e> . (list<a>, (a) -> e b) -> e list<b>
+obstacle to backward compatibility. For instance, if we annotate arrows with the
+effects they can perform between square brackets, the function \lstinline{map} has
+the following type, even though it does not perform any effect itself.
+\begin{lstlisting}[style=metl]
+  forall e . (list a, a ->[e] b) ->[e] list b
 \end{lstlisting}
-Syntactic sugar can simplify such signatures, as demonstrated by
-Frank~\cite{frank2020}. But, relying on syntax makes the system fragile.
+The effect variable \lstinline{e} allows \lstinline{map} to take any effectfull
+function as argument. Syntactic sugar can simplify such signatures, as
+demonstrated by Frank~\cite{frank2020}. But relying on syntax makes the system
+fragile.
 
 The language Effekt~\cite{effekt2020} answers this problem with a
 \emph{capability} based system. However, to guarantee effect-safety, functions
