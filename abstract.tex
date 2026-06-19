@@ -156,28 +156,29 @@ the following type, even though it does not perform any effect itself.
 \begin{lstlisting}[style=metl]
   forall e . (list a, a ->[e] b) ->[e] list b
 \end{lstlisting}
-The effect variable \lstinline{e} allows \lstinline{map} to take any effectfull
+The effect variable \lstinline{e} allows \lstinline{map} to take any effectful
 function as argument. Syntactic sugar can simplify such signatures, as
 demonstrated by Frank~\cite{frank2020}. But relying on syntax makes the system
 fragile.
 
-The language Effekt~\cite{effekt2020} answers this problem with a
+The language Effekt~\cite{effekt2020} solves this problem with a
 \emph{capability} based system. However, to guarantee effect-safety, functions
 become second-class objects, hindering backward compatibilty.
 
 \subsection{Modal Effect Types}
-\Met~\cite{tang2025modal, tang2026modal} draws inspiration from
-Multimodal Type Theory~\cite{mtt2020} and represents effects a computation can
-perform with \emph{effect contexts}; \emph{modalities} then modify effect
-contexts. For instance, the \textsf{map} function has the following type, where
-the modality \texttt{\small[]} indicates that the function does not perform any
-effect.
-\begin{lstlisting}[style=metl]
-  [](forall a b . (a -> b) -> list a -> list b)
-\end{lstlisting}
+Modal effect types (\Met) remove the need for effect variables by not tiing
+effects to arrows ~\cite{tang2025modal, tang2026modal}. In \Met,
+%draws inspiration from Multimodal Type Theory~\cite{mtt2020} and
+\emph{effect contexts} represent the effects a computation; \emph{modalities}
+then modify effect contexts. For instance, the \textsf{map} function has the
+following type, where the modality $[]$ indicates that the function
+does not perform any effect.
+\[
+  [](\forall a b . (a \to b) \to \textsf{list } a \to \textsf{list } b)
+\]
 
-As modalities require explicit boxing and unboxing, one needs an inference
-algorithm to turn \Met into a programming language. The original
+As modalities require explicit boxing and unboxing, \Met needs an inference
+algorithm to become a programming language. The original
 paper~\cite{tang2025modal} provides such an algorithm that translates a surface
 language called \Metl to \Met. But this algorithm only deals with modalities:
 \Metl requires explicit type application for value polymorphism.
@@ -194,12 +195,14 @@ the effect context $\textsf{gen int}$, where $\textsf{gen } [a] = \textsf{yield}
 meaning is independent from the ambient effect context. To avoid leakage, the
 types of inputs and outputs of operation have kind \textsf{Abs}.
 
-Modalities change the ambient effect contexts: either by replacing it
-by an independent one (absolute modalities: $[E]$), or by removing and adding
-some effects (relative modalities: $\langle L|D\rangle$). The $\keyw{mod}_\mu$
-and $\keyw{let mod}_\mu$ constructs respectively introduce and eliminate
-modality $\mu$. For example, this expression performs explicit subeffecting of a
-variable $x:[](\textsf{int} \to\textsf{int})$:
+Modalities change the ambient effect contexts: either by replacing it by an
+independent one (absolute modalities: $[E]$), or by removing and adding some
+effects (relative modalities: $\langle L|D\rangle$). In the type of
+\textsf{map}, the absolute modality $[]$ replaces the effect context with an
+empty one, which ensures that the function does not perform any effect
+itself. The $\keyw{mod}_\mu$ and $\keyw{let mod}_\mu$ constructs respectively
+introduce and eliminate modality $\mu$. For example, this expression performs
+explicit subeffecting of a variable $x:[](\textsf{int} \to\textsf{int})$:
 \[
 \left(\keyw{let mod}_{[]} y = x \keyw{ in } \keyw{mod}_{[E]}y\right) : [E](\textsf{int} \to\textsf{int})
 \]
@@ -234,6 +237,14 @@ pseudo-rule below summarises this approach.
   }
   {\\}
 \end{mathpar}
+For instance, consider two variables $\textsf{poly'}:\forall a.(\forall b. b\to
+b\times a)\to a$ and $\textsf{ids}:\textsf{list }\forall a.a\to a$. Frost infers
+the type $\textsf{list }\forall a.a\to a$ for $\textsf{poly'} (\lambda x. (x,
+\textsf{ids}))$. First, the skeleton
+$\TopHole.\Hole\to\Hole\times\TopHole.\textsf{list }\forall a.a\to a$ of the
+argument instantiate $a$ to $\textsf{list }\forall a.a\to a$. Then, the type
+argument $\forall b.b\to b\times\textsf{list }\forall a.a\to a$ wraps the
+argument in a type abstraction.
 
 As noted in previous work on \Met, elimination and introduction of
 modalities remind instantiation and generalisation in type
