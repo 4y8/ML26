@@ -1,4 +1,4 @@
-\documentclass[sigplan, nonacm = true, natbib = false, review = true, screen]{acmart}
+\documentclass[sigplan, nonacm, natbib = false, review, screen]{acmart}
 
 \usepackage{listings}
 
@@ -72,6 +72,8 @@
 \usepackage{xspace}
 \newcommand{\Met}{\textsc{Met}\xspace}
 \newcommand{\Metl}{\textsc{Metl}\xspace}
+%% AB: probably change this name
+\newcommand{\MetlFrost}{$\textsc{Metl}^{\textsf{Frost}}$\xspace}
 %%
 
 %% Margin notes.
@@ -87,8 +89,9 @@
 \newcommand{\aghilas}[1]{\todobox{red}{Aghilas}{#1}}
 %% ... up to here
 
-\title{Practical programming with Modal Effect Types (Research Presentation)}
-\settopmatter{authorsperrow=5}
+\title{Practical programming with Modal Effect Types}
+\subtitle{Research Presentation}
+\settopmatter{authorsperrow=3}
 
 \author{Aghilas Y. Boussaa}
 \orcid{0009-0005-5954-1711}
@@ -106,21 +109,21 @@
   \country{UK}
 }
 
-\author{Shengyi Jiang}
-\orcid{0000-0002-4443-0753}
-\email{syjiang@cs.hku.hk}
-\affiliation{%
-  \institution{The University of Hong Kong}
-  \country{China}
-}
+%% \author{Shengyi Jiang}
+%% \orcid{0000-0002-4443-0753}
+%% \email{syjiang@cs.hku.hk}
+%% \affiliation{%
+%%   \institution{The University of Hong Kong}
+%%   \country{China}
+%% }
 
-\author{Bruno C. d. S. Oliveira}
-\orcid{0000-0002-1846-7210}
-\email{bruno@cs.hku.hk}
-\affiliation{%
-  \institution{The University of Hong Kong}
-  \country{China}
-}
+%% \author{Bruno C. d. S. Oliveira}
+%% \orcid{0000-0002-1846-7210}
+%% \email{bruno@cs.hku.hk}
+%% \affiliation{%
+%%   \institution{The University of Hong Kong}
+%%   \country{China}
+%% }
 
 \author{Sam Lindley}
 \orcid{0000-0002-1360-4714}
@@ -128,8 +131,6 @@
 \affiliation{%
   \institution{The University of Edinburgh}
   \country{UK}}
-\keywords{effect handlers, effect types, modal types, type inference,
-  first-class polymorphism}
 
 \begin{document}
 \sloppy
@@ -137,11 +138,13 @@
   Effect handlers are gaining in popularity and existing languages start
   supporting them. However, existing type-and-effect systems lack either
   backward compatibility or robustness. Modal effect types aim at solving both
-  issues but lack type inference.
+  issues but lack type inference for values. To be user-friendly, modal effect
+  types also need automatic boxing and unboxing of modalities.
 
-  We overview our implementation of a toy ML-like language that combines modal
-  effect types and Frost, a new type inference algorithm for first-class
-  polymorphism.
+  We overview our implementation of a toy ML-like programming language that
+  combines modal effect types and Frost, a new type inference algorithm for
+  first-class polymorphism. This algorithm deals with modalities and quantifiers
+  in the same way, which allows type and modalities inference.
 \end{abstract}
 \maketitle
 \section{Introduction}
@@ -228,15 +231,8 @@ on \emph{skeletons}. Skeletons are types haunted by \emph{ghosts} ($\Hole$) and
 \emph{universal ghosts} ($\TopHole$), i.e.\ skeletons are types with holes in
 type or quantifier position. When type checking an application, the rule infers
 a skeleton for the argument, use that skeleton to infer a type for the function
-and check the argument against the function type's argument. The simplified
-pseudo-rule below summarises this approach.
-\begin{mathpar}
-  \inferrule*[Lab=\textsc{T-App}]
-  {
-    \\
-  }
-  {\\}
-\end{mathpar}
+and check the argument against the function type's argument.
+
 For instance, consider two variables $\textsf{poly'}:\forall a.(\forall b. b\to
 b\times a)\to a$ and $\textsf{ids}:\textsf{list }\forall a.a\to a$. Frost infers
 the type $\textsf{list }\forall a.a\to a$ for $\textsf{poly'} (\lambda x. (x,
@@ -251,10 +247,11 @@ modalities remind instantiation and generalisation in type
 inference~\cite[Section 7]{tang2025modal}. Frost implements this parallel thanks
 to universal ghosts that unify the treatment of modalities and quantifiers.
 
-We will review a toy programming language which combines Frost and modal effect
-types. Examples in the core language and our new languages will demonstrate the
-capabilities of the latter. Then, other examples will show some limitations of
-our implementation. More examples, as well as a test suite are available
+We will review a toy programming language which adapts Frost to infer modal
+effect types, which we call \MetlFrost. Examples in \Met, \Metl and \MetlFrost
+will demonstrate the capabilities of the latter. Then, other examples will show
+some limitations of our implementation. More examples, as well as a test suite
+are available
 \href{https://github.com/4y8/modal-effect-types/tree/frost}{online}.
 
 We lack proofs of completeness and soudness for the extension of Frost to modal
@@ -264,30 +261,27 @@ effect types.
 \subsection{Our implementation}
 The core language of our implementation is \Met with scoped
 rows~\cite{scopedrows2005} as an effect structure (i.e.\ our modalities will
-have scoped rows of effects) and some additions such as parametric effects and
+have scoped rows of effects) with some additions such as parametric effects and
 algebraic data types.
 
-\aghilas{remove or rephrase}
+\aghilas{I am not sure of how to integrate these paragraphs, if they are relevant}
 \Met has modality-annotated variable declarations in its contexts:
 $x:_\mu A$, where $A$ can also have a modality. For simplicity's sake, the
 source language has usual plain bindings, and unboxes all the modalities of
 variables.
 
-Skeleton inference introduces universal ghosts when typing lambda
-abstractions. As any modality could replace these ghosts, effect contexts become
-arbitrary. For the sake of simplicity, skeleton inference does not use the
-ambient effect context.
 \subsection{Itering on a list}
 The standard iter higher-order function has type $\forall a . []((a \to
 \textsf{unit})\to \textsf{unit})$ in \Met. To call it, the function unboxes the
 absolute modality of $\textsf{iter}\, @a$, where the at sign indicates type
 application.
+\aghilas{not sure about the syntax we should use here}
 \[
 \begin{aligned}
 \Lambda a^{\textsf{Any}}.\,
 &\keyw{mod}_{[]}.\lambda f^{a\to\textsf{unit}} l^{\textsf{list }a}. \\
 &\keyw{match } l \keyw{ with } \\
-&\quad \textsf{Nil} \to () \\
+&\quad \mid \textsf{Nil} \to () \\
 &\quad \mid \textsf{Cons}(hd,tl) \to
    \keyw{let\ mod}^{\langle\rangle}\_ = f\,hd \keyw{\ in } \\
 &\qquad\qquad
@@ -306,7 +300,6 @@ application.
 
 The bidirectionnal type system of \Metl avoids explicit modality unboxing.
 \begin{lstlisting}[style=metl]
-  val iter : forall a . []((a -> unit) -> list a -> unit)
   let iter f l =
     match l with
     | Nil -> ()
@@ -341,12 +334,11 @@ this annotation as well as the explicit type application.
 
 \subsection{Some limitations}
 \paragraph{Syntactic treatment of quantifiers}
-Our current unification rules have a syntactical treatment of quantifiers. Thus
-we can unify neither \lstinline[style=metl]{[l]<l'>(unit -> unit)} and
-\lstinline[style=metl]{[l', l](unit -> unit)}, nor
-\lstinline[style=metl]{forall a b . a * b} and
-\lstinline[style=metl]{forall b a . a * b}, while they are both subtype of
-eachother in both cases.
+Our current unification rules have a syntactical treatment of quantifiers.  We
+can unify neither $[l]\langle l'\rangle(\textsf{unit}\to\textsf{unit})$ and
+$[l', l](\textsf{unit}\to\textsf{unit})$, nor $\forall a b . a \times b$ and
+$\forall b a . a \times b$, while they are both subtype of eachother in both
+cases.
 
 \paragraph{Lack of kind inference}
 The rule to infer lambda abstractions introduces a fresh type variable for the
@@ -356,10 +348,13 @@ values need an annotation. For instance, the \lstinline[style=metl]{find}
 function of the previous subsection does not type check without the top-level
 annotation because the variable \lstinline[style=metl]{x} is not pure.
 
-\subsection{Future work}
+\subsection{Conclusion and future work}
+The extension of Frost to modal effect types is a promising approach to
+integrate effect handlers in functional programming languages.
+
 Future work includes: taking effect contexts into account in skeleton inference;
-extending Frost to support a fragment of system $F^\omega$; and allowing
-commutation of type constructors and quantifiers when sound.
+extending Frost to support a fragment of system $F^\omega$; and exploring a more
+semantic treatment of quantifiers and modalities.
 
 \printbibliography
 
