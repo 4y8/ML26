@@ -73,7 +73,7 @@
 \newcommand{\Met}{\textsc{Met}\xspace}
 \newcommand{\Metl}{\textsc{Metl}\xspace}
 %% AB: probably change this name
-\newcommand{\MetlFrost}{$\textsc{Metl}^{\textsf{Frost}}$\xspace}
+\newcommand{\MetlFrost}{$\textsc{Metl}^{\text{Frost}}$\xspace}
 %%
 
 %% Margin notes.
@@ -138,8 +138,8 @@
   Effect handlers are gaining in popularity and existing languages start
   supporting them. However, existing type-and-effect systems lack either
   backward compatibility or robustness. Modal effect types aim at solving both
-  issues but lack type inference for values. To be user-friendly, modal effect
-  types also need automatic boxing and unboxing of modalities.
+  issues. To be user-friendly, modal effect types also need automatic boxing and
+  unboxing of modalities, which have not yet been combined with type inference.
 
   We overview our implementation of a toy ML-like programming language that
   combines modal effect types and Frost, a new type inference algorithm for
@@ -166,19 +166,21 @@ fragile.
 
 The language Effekt~\cite{effekt2020} solves this problem with a
 \emph{capability} based system. However, to guarantee effect-safety, functions
-become second-class objects, hindering backward compatibilty.
+become second-class objects, which hinders backward compatibilty.
 
 \subsection{Modal Effect Types}
 Modal effect types (\Met) remove the need for effect variables by not tiing
 effects to arrows ~\cite{tang2025modal, tang2026modal}. In \Met,
 %draws inspiration from Multimodal Type Theory~\cite{mtt2020} and
-\emph{effect contexts} represent the effects a computation; \emph{modalities}
-then modify effect contexts. For instance, the \textsf{map} function has the
-following type, where the modality $[]$ indicates that the function
-does not perform any effect.
+\emph{effect contexts} represent the effects a computation can perform;
+\emph{modalities} then modify effect contexts. For instance, the \textsf{map}
+function has the following type, where the modality $[]$ indicates that the
+function does not perform any effect.
 \[
   [](\forall a b . (a \to b) \to \textsf{list } a \to \textsf{list } b)
 \]
+Type-checking the body of the \textsf{map} function will happen in an empty
+effect context because of this modality.
 
 As modalities require explicit boxing and unboxing, \Met needs an inference
 algorithm to become a programming language. The original
@@ -189,23 +191,27 @@ language called \Metl to \Met. But this algorithm only deals with modalities:
 We now give an overview of \Met that highlights the bits we want to
 infer. See~\cite{tang2025modal, tang2026modal} for a complete introduction.
 
-All typing judgements take a row of effects as input called the \emph{ambient
-effect context} which indicates the effects the current computation can
-perform. For instance, the expression $\Do \textsf{yield } 1$ is well-typed in
-the effect context $\textsf{gen int}$, where $\textsf{gen } [a] = \textsf{yield}
-: a \Rightarrow \textsf{unit}$.  The brackets around the type parameter
-\textsf{a} indicate that it has kind \textsf{Abs}: the kind of types whose
-meaning is independent from the ambient effect context. To avoid leakage, the
-types of inputs and outputs of operation have kind \textsf{Abs}.
+All typing judgements take an ambient effect context as input. For instance, the
+expression $\Do \textsf{yield } 1$ is well-typed in the effect context
+$\textsf{gen int}$, where $\textsf{gen } [a] = \textsf{yield} : a \Rightarrow
+\textsf{unit}$.  The brackets around the type parameter $a$ indicate that it has
+kind \textsf{Abs}: the kind of types whose meaning is independent from the
+ambient effect context. There is another kind, called \textsf{Any}, that
+includes all types. To avoid effect leakage, the types of inputs and outputs of
+operation have kind \textsf{Abs}.
 
-Modalities change the ambient effect contexts: either by replacing it by an
+Modalities change the ambient effect context either by replacing it by an
 independent one (absolute modalities: $[E]$), or by removing and adding some
-effects (relative modalities: $\langle L|D\rangle$). In the type of
-\textsf{map}, the absolute modality $[]$ replaces the effect context with an
-empty one, which ensures that the function does not perform any effect
-itself. The $\keyw{mod}_\mu$ and $\keyw{let mod}_\mu$ constructs respectively
-introduce and eliminate modality $\mu$. For example, this expression performs
-explicit subeffecting of a variable $x:[](\textsf{int} \to\textsf{int})$:
+effects (relative modalities: $\langle L|D\rangle$).
+% AB: Already explained
+%% In the type of \textsf{map}, the absolute modality $[]$ replaces the effect
+%% context with an empty one, which ensures that the function does not perform any
+%% effect itself.
+%
+The $\keyw{mod}_\mu$ and $\keyw{let mod}_\mu$ constructs respectively introduce
+and eliminate modality $\mu$. For example, this expression performs explicit
+subeffecting of a variable $x:[](\textsf{int} \to\textsf{int})$ in any effect
+context:
 \[
 \left(\keyw{let mod}_{[]} y = x \keyw{ in } \keyw{mod}_{[E]}y\right) : [E](\textsf{int} \to\textsf{int})
 \]
@@ -231,27 +237,32 @@ on \emph{skeletons}. Skeletons are types haunted by \emph{ghosts} ($\Hole$) and
 \emph{universal ghosts} ($\TopHole$), i.e.\ skeletons are types with holes in
 type or quantifier position. When type checking an application, the rule infers
 a skeleton for the argument, use that skeleton to infer a type for the function
-and check the argument against the function type's argument.
+and check the argument against the function type's argument. The skeleton allows
+information flow from the argument to the function before it flows in the other
+way.
 
 For instance, consider two variables $\textsf{poly'}:\forall a.(\forall b. b\to
-b\times a)\to a$ and $\textsf{ids}:\textsf{list }\forall a.a\to a$. Frost infers
-the type $\textsf{list }\forall a.a\to a$ for $\textsf{poly'} (\lambda x. (x,
-\textsf{ids}))$. First, the skeleton
-$\TopHole.\Hole\to\Hole\times\TopHole.\textsf{list }\forall a.a\to a$ of the
-argument instantiate $a$ to $\textsf{list }\forall a.a\to a$. Then, the type
-argument $\forall b.b\to b\times\textsf{list }\forall a.a\to a$ wraps the
-argument in a type abstraction.
+b\times a)\to a$ and $\textsf{ids}:\textsf{list }(\forall a.a\to a)$. Frost
+infers the type $\textsf{list }(\forall a.a\to a)$ for the expression
+$\textsf{poly'} (\lambda x. (x, \textsf{ids}))$.
+%
+First, the skeleton $\TopHole.\Hole\to\Hole\times(\TopHole.\textsf{list
+}(\forall a.a\to a))$ of the argument instantiate the function's type variable
+$a$ to $\textsf{list }(\forall a.a\to a)$.
+%
+Then, checking the argument against $\forall b.b\to b\times\textsf{list
+}(\forall a.a\to a)$ wraps the argument in a type abstraction.
 
 As noted in previous work on \Met, elimination and introduction of
 modalities remind instantiation and generalisation in type
 inference~\cite[Section 7]{tang2025modal}. Frost implements this parallel thanks
 to universal ghosts that unify the treatment of modalities and quantifiers.
 
-We will review a toy programming language which adapts Frost to infer modal
+We will review a toy programming language which extends Frost to infer modal
 effect types, which we call \MetlFrost. Examples in \Met, \Metl and \MetlFrost
 will demonstrate the capabilities of the latter. Then, other examples will show
-some limitations of our implementation. More examples, as well as a test suite
-are available
+some limitations of \MetlFrost. More examples, as well as a test suite are
+available
 \href{https://github.com/4y8/modal-effect-types/tree/frost}{online}.
 
 We lack proofs of completeness and soudness for the extension of Frost to modal
@@ -264,18 +275,17 @@ rows~\cite{scopedrows2005} as an effect structure (i.e.\ our modalities will
 have scoped rows of effects) with some additions such as parametric effects and
 algebraic data types.
 
-\aghilas{I am not sure of how to integrate these paragraphs, if they are relevant}
-\Met has modality-annotated variable declarations in its contexts:
+\aghilas{I am not sure of how to integrate these paragraphs, if they are
+  relevant} \Met has modality-annotated variable declarations in its contexts:
 $x:_\mu A$, where $A$ can also have a modality. For simplicity's sake, the
-source language has usual plain bindings, and unboxes all the modalities of
-variables.
+\MetlFrost, like \Metl, has usual plain bindings, and unboxes all the modalities
+of variables.
 
 \subsection{Itering on a list}
 The standard iter higher-order function has type $\forall a . []((a \to
-\textsf{unit})\to \textsf{unit})$ in \Met. To call it, the function unboxes the
-absolute modality of $\textsf{iter}\, @a$, where the at sign indicates type
-application.
-\aghilas{not sure about the syntax we should use here}
+\textsf{unit})\to \textsf{unit})$ in \Met. To call itself, the function unboxes
+the absolute modality of $\textsf{iter}\, @a$, where the at sign indicates type
+application.  \aghilas{not sure about the syntax we should use here}
 \[
 \begin{aligned}
 \Lambda a^{\textsf{Any}}.\,
@@ -298,15 +308,17 @@ application.
 %% i\; f\; tl
 %% \]
 
-The bidirectionnal type system of \Metl avoids explicit modality unboxing.
+The type in \Metl and \MetlFrost is the same as the \Met one. The bidirectionnal
+type system of \Metl avoids explicit modality unboxing.
 \begin{lstlisting}[style=metl]
+  val iter : forall a . []((a -> unit) -> unit)
   let iter f l =
     match l with
     | Nil -> ()
     | Cons (hd, tl) -> f hd; iter @a f tl
     end
 \end{lstlisting}
-And Frost removes the type application.
+And \MetlFrost removes the type application.
 \begin{lstlisting}[style=metl]
     | Cons (hd, tl) -> f hd; iter f tl
 \end{lstlisting}
@@ -352,8 +364,8 @@ annotation because the variable \lstinline[style=metl]{x} is not pure.
 The extension of Frost to modal effect types is a promising approach to
 integrate effect handlers in functional programming languages.
 
-Future work includes: taking effect contexts into account in skeleton inference;
-extending Frost to support a fragment of system $F^\omega$; and exploring a more
+Future work includes taking effect contexts into account in skeleton inference,
+extending Frost to support a fragment of system $F^\omega$, and exploring a more
 semantic treatment of quantifiers and modalities.
 
 \printbibliography
