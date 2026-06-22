@@ -185,65 +185,52 @@ function does not perform any effect.
 \[
   \forall a b . []((a \to b) \to \textsf{list } a \to \textsf{list } b)
 \]
-Type-checking the body of the \textsf{map} function will happen in an empty
-effect context because of this modality.
+The modality $[]$ is \emph{absolute}, which means that it replaces the effect
+context with an independent one; here the empty context. For an effect context
+$E$, the modality $[E]$ replaces the effect context by $E$. In the example
+above, the modality implies that if any of the arrow in the type of \textsf{map}
+performs an effect, then this effect comes from the ambient context of one of
+the parent computations.
+%
+There is another kind of modality: \emph{relative} modalities $\langle
+L|D\rangle$ remove the effects in $L$ from the ambient effect context before
+adding the effects in $D$.
 
-\sam{The reader isn't going to know that modalities require explicit
-  boxing and unboxing. This needs explaining.}
+On the term level, the $\keyw{mod}_\mu$ and $\keyw{let mod}_\mu$ constructs
+respectively introduce and eliminate modality $\mu$. For example, this
+expression performs explicit subeffecting of a variable $x:[](\textsf{int}
+\to\textsf{int})$ in any effect context:
+\[
+\left(\keyw{let mod}_{[]} y = x \keyw{ in } \keyw{mod}_{[E]} y\right) : [E](\textsf{int} \to\textsf{int})
+\]
+The $\keyw{mod}_\mu V$ expression modifies the effect context of the value $V$
+by applying the modality $\mu$. Let-bindings allow to retreive the original
+value: $\keyw{let mod}_\mu x = \keyw{mod}_\mu V \keyw{ in } x$ reduces to $V$.
 
-As modalities require explicit boxing and unboxing, \Met needs an inference
-algorithm to become a programming language. The original
+Therefore modalities require explicit boxing and unboxing, and \Met needs an
+inference algorithm to become a programming language. The original
 paper~\cite{tang2025modal} provides such an algorithm that translates a surface
 language called \Metl to \Met. But this algorithm only deals with modalities:
 \Metl requires explicit type application for value polymorphism.
 
-We now give an overview of \Met that highlights the bits we want to
-infer. See~\cite{tang2025modal, tang2026modal} for a complete introduction.
+\sam{The reader isn't going to know that modalities require explicit
+  boxing and unboxing. This needs explaining.}
 
-All typing judgements take an ambient effect context as input. For instance, the
-expression $\Do \textsf{yield } 1$ is well-typed in the effect context
-$\textsf{gen int}$, where $\textsf{gen } [a] = \textsf{yield} : a \Rightarrow
-\textsf{unit}$.  The brackets around the type parameter $a$ indicate that it has
-kind \textsf{Abs}: the kind of types whose meaning is independent from the
-ambient effect context. There is another kind, called \textsf{Any}, that
-includes all types. To avoid effect leakage, the types of inputs and outputs of
-operation have kind \textsf{Abs}.
+See~\cite{tang2025modal, tang2026modal} for a complete introduction to modal
+effect types.
 
-Modalities change the ambient effect context either by replacing it by an
-independent one (absolute modalities: $[E]$), or by removing and adding some
-effects (relative modalities: $\langle L|D\rangle$).
-% AB: Already explained
-%% In the type of \textsf{map}, the absolute modality $[]$ replaces the effect
-%% context with an empty one, which ensures that the function does not perform any
-%% effect itself.
-%
-The $\keyw{mod}_\mu$ and $\keyw{let mod}_\mu$ constructs respectively introduce
-and eliminate modality $\mu$. For example, this expression performs explicit
-subeffecting of a variable $x:[](\textsf{int} \to\textsf{int})$ in any effect
-context:
-\[
-\left(\keyw{let mod}_{[]} y = x \keyw{ in } \keyw{mod}_{[E]}y\right) : [E](\textsf{int} \to\textsf{int})
-\]
-
-Handlers also modify the effect context of the expression they encompass, to add
-the effects they handle. In an empty effect context, this expression is
-well-typed:
-\[
-\keyw{handle } (\Do \textsf{yield } 1) \keyw{ with }\{\textsf{yield } k\; n
-\Rightarrow n \} : \textsf{int}
-\]
-but needs an annotation to specify the parameter of the effect \textsf{gen}.
-
-\sam{I'm not clear on when, where or why we need a type annotation
-  here.}
+% AB: removed the paragraph
+%\sam{I'm not clear on when, where or why we need a type annotation
+%  here.}
 
 \subsection{Frost type inference}
 The usual way to type check an application with a bidirectional type system is
 to, first, infer the type of the function and then use this type to check the
-argument~\cite{dunfield2013complete, greedy2023, jiang2025bidirectional}. Fewer
-type systems allow the information to flow from the argument to the
-function~\cite{pierce2000local, xie2018let}.
+argument~\cite{dunfield2013complete, greedy2023, jiang2025bidirectional}. Less
+commonly, some type systems allow the information to flow from the argument to
+the function~\cite{pierce2000local, xie2018let}.
 
+% AB: should be fixed
 \sam{Fewer type systems? I think we mean something like ``Less
   commonly, some type systems...''}
 
@@ -268,12 +255,14 @@ $a$ to $\textsf{list }(\forall a.a\to a)$.
 Then, checking the argument against $\forall b.b\to b\times\textsf{list
 }(\forall a.a\to a)$ wraps the argument in a type abstraction.
 
-\sam{``remind'' should presumably be ``is reminiscent of''}
-As noted in previous work on \Met, elimination and introduction of
-modalities remind instantiation and generalisation in type
-inference~\cite[Section 7]{tang2025modal}. Frost implements this parallel thanks
-to universal ghosts that unify the treatment of modalities and quantifiers.
+% AB: should be fixed
+\sam{``remind'' should presumably be ``is reminiscent of''} As noted in previous
+work on \Met, elimination and introduction of modalities is reminiscent of
+instantiation and generalisation in type inference~\cite[Section
+  7]{tang2025modal}. Universal ghosts unify the treatment of modalities and
+quantifiers.
 
+% AB: should be fixed
 \sam{``parallel''?}
 
 We will review a toy programming language which extends Frost to infer modal
@@ -283,8 +272,9 @@ some limitations of \MetlFrost. More examples, as well as a test suite are
 available
 \href{https://github.com/4y8/modal-effect-types/tree/frost}{online}.
 
-We lack proofs of completeness and seediness for the extension of Frost to modal
+We lack proofs of completeness and soundness for the extension of Frost to modal
 effect types.
+% AB: should be fixed
 \sam{I'm intrigued by seediness :)}
 
 \section{Practical programming with Modal Effect Types}
@@ -342,15 +332,25 @@ And \MetlFrost removes the type application.
     | Cons (hd, tl) -> f hd; iter f tl
 \end{lstlisting}
 
+% AB: should be fixed, got confused because of the function's name
 \sam{I think ``Finding in a'' means ``Searching a''}
 
-\subsection{Finding in a list with effects}
+\subsection{Searching a list with effects}
 Calling the iterator from the last subsection with an effectful function as
 argument can find an element in a list, thanks to the parametric effect below.
 \begin{lstlisting}[style=metl]
   eff gen [a] = yield : a => unit
 \end{lstlisting}
-Once again, \Metl eliminates the need of modality boxing and unboxing.
+The declaration above defines a parametric effect \lstinline[style=metl]{gen}
+with a single operation \lstinline[style=metl]{yield}. The brackets around the
+parameter \lstinline[style=metl]{a} indicate that it has kind \textsf{Abs}: the
+kind of types whose meaning is independent from the ambient effect
+context. There is another kind, called \textsf{Any}, that includes all types. To
+avoid effect leakage, the types of inputs and outputs of operation have kind
+\textsf{Abs}.
+
+Once again, \Metl
+eliminates the need of modality boxing and unboxing.
 \begin{lstlisting}[style=metl]
   val find :
     forall [a] . []((a -> bool) -> list a -> option a)
