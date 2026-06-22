@@ -87,6 +87,7 @@
   \begin{spacing}{0.9}\footnotesize\textbf{#2:} #3\end{spacing}}}}
 \newcommand{\wenhao}[1]{\todobox{blue}{Wenhao}{#1}}
 \newcommand{\aghilas}[1]{\todobox{red}{Aghilas}{#1}}
+\newcommand{\sam}[1]{\todobox{yellow}{Sam}{#1}}
 %% ... up to here
 
 \title{Practical programming with Modal Effect Types}
@@ -166,10 +167,15 @@ fragile.
 
 The language Effekt~\cite{effekt2020} solves this problem with a
 \emph{capability} based system. However, to guarantee effect-safety, functions
-become second-class objects, which hinders backward compatibilty.
+become second-class objects, which hinders backward compatibility.
 
 \subsection{Modal Effect Types}
-Modal effect types (\Met) remove the need for effect variables by not tiing
+
+\sam{We need to explain \emph{how} the modality $[]$ modifies the
+  ambient effect context here - and in particular how conceptually it
+  applies to all of the arrows contained in its scope.}
+
+Modal effect types (\Met) remove the need for effect variables by not tying
 effects to arrows ~\cite{tang2025modal, tang2026modal}. In \Met,
 %draws inspiration from Multimodal Type Theory~\cite{mtt2020} and
 \emph{effect contexts} represent the effects a computation can perform;
@@ -181,6 +187,9 @@ function does not perform any effect.
 \]
 Type-checking the body of the \textsf{map} function will happen in an empty
 effect context because of this modality.
+
+\sam{The reader isn't going to know that modalities require explicit
+  boxing and unboxing. This needs explaining.}
 
 As modalities require explicit boxing and unboxing, \Met needs an inference
 algorithm to become a programming language. The original
@@ -225,21 +234,27 @@ well-typed:
 \]
 but needs an annotation to specify the parameter of the effect \textsf{gen}.
 
+\sam{I'm not clear on when, where or why we need a type annotation
+  here.}
+
 \subsection{Frost type inference}
-The usual way to type check an application with a bidirectionnal type system is
+The usual way to type check an application with a bidirectional type system is
 to, first, infer the type of the function and then use this type to check the
 argument~\cite{dunfield2013complete, greedy2023, jiang2025bidirectional}. Fewer
 type systems allow the information to flow from the argument to the
 function~\cite{pierce2000local, xie2018let}.
 
-Frost supports information flow in both ways. To do so, the type system relies
+\sam{Fewer type systems? I think we mean something like ``Less
+  commonly, some type systems...''}
+
+Frost supports information flow in both directions. To do so, the type system relies
 on \emph{skeletons}. Skeletons are types haunted by \emph{ghosts} ($\Hole$) and
 \emph{universal ghosts} ($\TopHole$), i.e.\ skeletons are types with holes in
 type or quantifier position. When type checking an application, the rule infers
-a skeleton for the argument, use that skeleton to infer a type for the function
-and check the argument against the function type's argument. The skeleton allows
+a skeleton for the argument, uses that skeleton to infer a type for the function
+and checks the argument against the function type's argument. The skeleton allows
 information flow from the argument to the function before it flows in the other
-way.
+direction.
 
 For instance, consider two variables $\textsf{poly'}:\forall a.(\forall b. b\to
 b\times a)\to a$ and $\textsf{ids}:\textsf{list }(\forall a.a\to a)$. Frost
@@ -253,10 +268,13 @@ $a$ to $\textsf{list }(\forall a.a\to a)$.
 Then, checking the argument against $\forall b.b\to b\times\textsf{list
 }(\forall a.a\to a)$ wraps the argument in a type abstraction.
 
+\sam{``remind'' should presumably be ``is reminiscent of''}
 As noted in previous work on \Met, elimination and introduction of
 modalities remind instantiation and generalisation in type
 inference~\cite[Section 7]{tang2025modal}. Frost implements this parallel thanks
 to universal ghosts that unify the treatment of modalities and quantifiers.
+
+\sam{``parallel''?}
 
 We will review a toy programming language which extends Frost to infer modal
 effect types, which we call \MetlFrost. Examples in \Met, \Metl and \MetlFrost
@@ -265,8 +283,9 @@ some limitations of \MetlFrost. More examples, as well as a test suite are
 available
 \href{https://github.com/4y8/modal-effect-types/tree/frost}{online}.
 
-We lack proofs of completeness and soudness for the extension of Frost to modal
+We lack proofs of completeness and seediness for the extension of Frost to modal
 effect types.
+\sam{I'm intrigued by seediness :)}
 
 \section{Practical programming with Modal Effect Types}
 \subsection{Our implementation}
@@ -281,7 +300,7 @@ $x:_\mu A$, where $A$ can also have a modality. For simplicity's sake, the
 \MetlFrost, like \Metl, has usual plain bindings, and unboxes all the modalities
 of variables.
 
-\subsection{Itering on a list}
+\subsection{Iterating on a list}
 The standard iter higher-order function has type $\forall a . []((a \to
 \textsf{unit})\to \textsf{unit})$ in \Met. To call itself, the function unboxes
 the absolute modality of $\textsf{iter}\, @a$, where the at sign indicates type
@@ -322,6 +341,9 @@ And \MetlFrost removes the type application.
 \begin{lstlisting}[style=metl]
     | Cons (hd, tl) -> f hd; iter f tl
 \end{lstlisting}
+
+\sam{I think ``Finding in a'' means ``Searching a''}
+
 \subsection{Finding in a list with effects}
 Calling the iterator from the last subsection with an effectful function as
 argument can find an element in a list, thanks to the parametric effect below.
@@ -349,7 +371,7 @@ need for this annotation as well as the explicit type application.
 Our current unification rules have a syntactical treatment of quantifiers.  We
 can unify neither $[l]\langle l'\rangle(\textsf{unit}\to\textsf{unit})$ and
 $[l', l](\textsf{unit}\to\textsf{unit})$, nor $\forall a b . a \times b$ and
-$\forall b a . a \times b$, while they are both subtype of eachother in both
+$\forall b a . a \times b$, while they are both subtype of each other in both
 cases.
 
 \paragraph{Lack of kind inference}
@@ -371,3 +393,7 @@ semantic treatment of quantifiers and modalities.
 \printbibliography
 
 \end{document}
+
+% LocalWords:  polymorphism Koka callees forall effectful Effekt iter
+% LocalWords:  subeffecting instantiation hd tl bool
+% LocalWords:  metl subtype
