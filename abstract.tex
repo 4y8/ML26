@@ -177,7 +177,7 @@ effects to arrows ~\cite{tang2025modal, tang2026modal}. In \Met,
 function has the following type, where the modality $[]$ indicates that the
 function does not perform any effect.
 \[
-  [](\forall a b . (a \to b) \to \textsf{list } a \to \textsf{list } b)
+  \forall a b . []((a \to b) \to \textsf{list } a \to \textsf{list } b)
 \]
 Type-checking the body of the \textsf{map} function will happen in an empty
 effect context because of this modality.
@@ -271,9 +271,9 @@ effect types.
 \section{Practical programming with Modal Effect Types}
 \subsection{Our implementation}
 The core language of our implementation is \Met with scoped
-rows~\cite{scopedrows2005} as an effect structure (i.e.\ our modalities will
-have scoped rows of effects) with some additions such as parametric effects and
-algebraic data types.
+rows~\cite{scopedrows2005} as an effect structure (i.e.\ modalities will have
+scoped rows of effects) with additions such as parametric effects and algebraic
+data types.
 
 \aghilas{I am not sure of how to integrate these paragraphs, if they are
   relevant} \Met has modality-annotated variable declarations in its contexts:
@@ -340,9 +340,9 @@ Once again, \Metl eliminates the need of modality boxing and unboxing.
     | yield x k => Some (x)
     end
 \end{lstlisting}
-The brackets that follow the \lstinline[style=metl]{handle} keyword provide a
-parameter for the effect \lstinline[style=metl]{gen}. Frost erases the need for
-this annotation as well as the explicit type application.
+The angle brackets that follow the \lstinline[style=metl]{handle} keyword
+provide a parameter for the effect \lstinline[style=metl]{gen}. Frost erases the
+need for this annotation as well as the explicit type application.
 
 \subsection{Some limitations}
 \paragraph{Syntactic treatment of quantifiers}
@@ -353,9 +353,9 @@ $\forall b a . a \times b$, while they are both subtype of eachother in both
 cases.
 
 \paragraph{Lack of kind inference}
-The rule to infer lambda abstractions introduces a fresh type variable for the
-argument. As the system lacks kind inference, the kind of this variable is
-\textsf{Any} to be permissive. Therefore, functions that have to take pure
+The type inference rule for lambda abstractions introduces a fresh type variable
+for the argument. As the system lacks kind inference, the kind of this variable
+is \textsf{Any} to be permissive. Therefore, functions that have to take pure
 values need an annotation. For instance, the \lstinline[style=metl]{find}
 function of the previous subsection does not type check without the top-level
 annotation because the variable \lstinline[style=metl]{x} is not pure.
