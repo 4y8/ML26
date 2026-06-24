@@ -136,17 +136,31 @@
 \begin{document}
 \sloppy
 \begin{abstract}
-  Effect handlers are gaining in popularity and existing languages start
-  supporting them. However, existing type-and-effect systems lack either
-  backward compatibility or robustness. Modal effect types aim at solving both
-  issues. To be user-friendly, modal effect types also need automatic boxing and
-  \aghilas{should it be ``which has not yet...''?}
-  unboxing of modalities, which have not yet been combined with type inference.
-
-  We overview our implementation of a toy ML-like programming language that
-  combines modal effect types and Frost, a new type inference algorithm for
-  first-class polymorphism. This algorithm deals with modalities and quantifiers
-  in the same way, which allows type and modality inference.
+  % Effect handlers are a powerful programming construct allowing users
+  % to define and combine computational effects.
+  %
+  Effect systems statically track the effects that a program can
+  perform.
+  %
+  Traditional effect systems reply on effect variables to provide
+  modular type signatures for higher-order functions.
+  %
+  Modal effect types use modalities to give modular and succinct types
+  to higher-order functions, reducing the need for effect variables
+  meanwhile still allowing reusing higher-order functions to different
+  effectful arguments.
+  %
+  However, the practical implement of modal effect types, in
+  particular how to infer modalities, remains largely unexplored.
+  
+  We overview our implementation of a toy ML-like programming language
+  with modal effect types.
+  %
+  The main novelty
+  that combines modal effect types and Frost, a new type inference
+  algorithm for first-class polymorphism. This algorithm deals with
+  modalities and quantifiers in the same way, which allows type and
+  modality inference.
 \end{abstract}
 \maketitle
 \section{Introduction}
