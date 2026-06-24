@@ -1,3 +1,5 @@
+% -*- fill-column: 80 -*-
+
 \documentclass[sigplan, nonacm, natbib = false, review, screen]{acmart}
 
 \usepackage{listings}
@@ -139,26 +141,23 @@
   % Effect handlers are a powerful programming construct allowing users
   % to define and combine computational effects.
   %
-  Effect systems statically track the effects that a program can
-  perform.
-  %
-  Traditional effect systems rely on effect variables to provide
-  modular type signatures for higher-order functions.
-  %
-  Modal effect types use modalities to give modular and succinct types
-  to higher-order functions, reducing the need for effect variables
-  meanwhile still allowing reusing higher-order functions to different
-  effectful arguments.
-  %
-  However, the practical implement of modal effect types, in
-  particular how to infer modalities, remains largely unexplored.
+  Effect systems statically track the effects that a program can perform.
+%
+  Traditional effect systems rely on effect variables to provide modular type
+  signatures for higher-order functions.
+%
+  Modal effect types use modalities to give modular and succinct types to
+  higher-order functions, reducing the need for effect variables meanwhile still
+  allowing higher-order functions to be instantiated with different effects.
+%
+  However, the practical implementation of modal effect types, and in particular
+  how to infer modalities, remains largely unexplored.
 
-  We overview our implementation of a toy ML-like programming language
-  with modal effect types.
-  %
-  Our main novelty is that we extend Frost, a new type inference
-  algorithm for first-class polymorphism, to infer first-class
-  modalities.
+  We overview our implementation of a toy ML-like programming language with
+  modal effect types.
+%
+  Our main novelty is that we extend Frost, a new type inference algorithm for
+  first-class polymorphism, to infer first-class modalities.
 \end{abstract}
 \maketitle
 \section{Introduction}
@@ -184,53 +183,92 @@ become second-class objects, which hinders backward compatibility.
 
 \subsection{Modal Effect Types}
 
-\sam{We need to explain \emph{how} the modality $[]$ modifies the
-  ambient effect context here - and in particular how conceptually it
-  applies to all of the arrows contained in its scope.}
+\sam{Introduce the \Met calculus!}
+
+%% \sam{We need to explain \emph{how} the modality $[]$ modifies the
+%%   ambient effect context here - and in particular how conceptually it
+%%   applies to all of the arrows contained in its scope.}
 
 Modal effect types (\Met) remove the need for effect variables by not tying
-effects to arrows ~\cite{tang2025modal, tang2026modal}. In \Met,
-%draws inspiration from Multimodal Type Theory~\cite{mtt2020} and
-\emph{effect contexts} represent the effects a computation can perform;
-\emph{modalities} then modify effect contexts. For instance, the \textsf{map}
-function has the following type, where the modality $[]$ indicates that the
-function does not perform any effect.
+effects to arrows ~\cite{tang2025modal, tang2026modal}.
+%
+An \emph{effect context} denotes the effects that a computation can perform.
+%
+A \emph{modality} is a transformation on effect contexts.
+%% , typically the
+%% currently active effect context which we refer to as the \emph{ambient effect
+%% context}.
+%
+%% %draws inspiration from Multimodal Type Theory~\cite{mtt2020} and
+%% \emph{effect contexts} represent the effects a computation can perform;
+%% \emph{modalities} then modify effect contexts.
+%
+Modalities may appear directly in types. The type $\mu A$ represents the
+application of modality $\mu$ to the ambient effect context in the type
+$A$. This transformation acts hereditarily on every arrow in $A$.
+%
+For instance, the \textsf{map} function has the following type, where $[]$ is a
+modality that indicates that the function does not perform any effect.
 \[
   \forall a b . []((a \to b) \to \textsf{list } a \to \textsf{list } b)
 \]
-The modality $[]$ is \emph{absolute}, which means that it replaces the effect
-context with an independent one; here the empty context. For an effect context
-$E$, the modality $[E]$ replaces the effect context by $E$. In the example
-above, the modality implies that if any of the arrow in the type of \textsf{map}
-performs an effect, then this effect comes from the ambient context of one of
-the parent computations.
+This denotes that \textsf{map} itself is pure.
 %
-There is another kind of modality: the \emph{relative} modality $\langle
+This may seem overly restrictive. However, when we instantiate \textsf{map} and
+eliminate the modality we may soundly upcast the empty effect to whatever the
+ambient effect context happens to be.
+%
+%% In general, $[E]$ denotes an \emph{absolute} modality, which overwrites the
+%% input effect context with $E$.
+%% %
+%% If we write $[E]A$ then $A$ asserts
+%
+%% In this case $E$ is empty.
+%% %
+%
+%% , which means that it replaces
+%% the input effect context with a
+%
+%% the ambient
+%% effect context with an independent one; here the empty context. In general, the
+%% modality $[E]$ replaces the ambient effect context with $E$. In the example
+%% above, the modality implies that if any of the arrow in the type of \textsf{map}
+%% performs an effect, then this effect comes from the ambient context of one of
+%% the parent computations.
+%
+\Met also provides another kind of modality: a \emph{relative} modality $\langle
 L|D\rangle$ remove the effects in $L$ from the ambient effect context before
-adding the effects in $D$.
+adding the effects in $D$. Relative modalities are important for typing effect
+handlers.
 
+\Met provides explicit constructs for introducing and eliminating modalities.
+%
 At the term level, the $\keyw{mod}_\mu$ and $\keyw{let mod}_\mu$ constructs
-respectively introduce and eliminate modality $\mu$. For example, this
+respectively introduce and eliminate modality $\mu$. For example, the following
 expression performs explicit subeffecting of a variable $x:[](\textsf{int}
 \to\textsf{int})$ in any effect context:
 \[
 \left(\keyw{let mod}_{[]} y = x \keyw{ in } \keyw{mod}_{[E]} y\right) : [E](\textsf{int} \to\textsf{int})
 \]
 The $\keyw{mod}_\mu V$ expression modifies the effect context of the value $V$
-by applying the modality $\mu$. Let-bindings allow to retreive the original
+by applying modality $\mu$. Let-bindings allow us to retrieve the original
 value: $\keyw{let mod}_\mu x = \keyw{mod}_\mu V \keyw{ in } x$ reduces to $V$.
 %
 See~\cite{tang2025modal, tang2026modal} for a complete introduction to modal
 effect types.
 
-Therefore modalities require explicit boxing and unboxing, and \Met needs an
-inference algorithm to become a programming language. The original
-paper~\cite{tang2025modal} provides such an algorithm that translates a surface
-language called \Metl to \Met. But this algorithm only deals with modalities:
-\Metl requires explicit type application for value polymorphism.
 
-\sam{The reader isn't going to know that modalities require explicit
-  boxing and unboxing. This needs explaining.}
+Just as writing explicit type abstractions and type applications in programs is
+inconvenient, writing explicit introduction and elimination forms for modalities
+is too.
+%
+The original \Met paper~\cite{tang2025modal} provides such an algorithm that
+translates a surface language called \Metl into \Met. But this algorithm only
+infers modalities: \Metl still requires explicit type applications for value
+polymorphism.
+%
+A central aim of our work is to combine modality inference with a bidirectional
+typing algorithm for first-class polymorphism.
 
 % AB: removed the paragraph
 %\sam{I'm not clear on when, where or why we need a type annotation
@@ -242,10 +280,6 @@ to, first, infer the type of the function and then use this type to check the
 argument~\cite{dunfield2013complete, greedy2023, jiang2025bidirectional}. Less
 commonly, some type systems allow the information to flow from the argument to
 the function~\cite{pierce2000local, xie2018let}.
-
-% AB: should be fixed
-\sam{Fewer type systems? I think we mean something like ``Less
-  commonly, some type systems...''}
 
 Frost supports information flow in both directions. To do so, the type system relies
 on \emph{skeletons}. Skeletons are types haunted by \emph{ghosts} ($\Hole$) and
@@ -262,21 +296,16 @@ infers the type $\textsf{list }(\forall a.a\to a)$ for the expression
 $\textsf{poly'} (\lambda x. (x, \textsf{ids}))$.
 %
 First, the skeleton $\TopHole.\Hole\to\Hole\times(\TopHole.\textsf{list
-}(\forall a.a\to a))$ of the argument instantiate the function's type variable
+}(\forall a.a\to a))$ of the argument instantiates the function's type variable
 $a$ to $\textsf{list }(\forall a.a\to a)$.
 %
 Then, checking the argument against $\forall b.b\to b\times\textsf{list
 }(\forall a.a\to a)$ wraps the argument in a type abstraction.
 
-% AB: should be fixed
-\sam{``remind'' should presumably be ``is reminiscent of''} As noted in previous
-work on \Met, elimination and introduction of modalities is reminiscent of
-instantiation and generalisation in type inference~\cite[Section
+As noted in previous work on \Met, elimination and introduction of modalities is
+reminiscent of instantiation and generalisation in type inference~\cite[Section
   7]{tang2025modal}. Universal ghosts unify the treatment of modalities and
 quantifiers.
-
-% AB: should be fixed
-\sam{``parallel''?}
 
 We will review a toy programming language which extends Frost to infer modal
 effect types, which we call \MetlFrost. Examples in \Met, \Metl and \MetlFrost
@@ -287,8 +316,6 @@ available
 
 We lack proofs of completeness and soundness for the extension of Frost to modal
 effect types.
-% AB: should be fixed
-\sam{I'm intrigued by seediness :)}
 
 \section{Practical programming with Modal Effect Types}
 \subsection{Our implementation}
@@ -344,9 +371,6 @@ And \MetlFrost removes the type application.
 \begin{lstlisting}[style=metl]
     | Cons (hd, tl) -> f hd; iter f tl
 \end{lstlisting}
-
-% AB: should be fixed, got confused because of the function's name
-\sam{I think ``Finding in a'' means ``Searching a''}
 
 \subsection{Searching a list with effects}
 Calling the iterator from the last subsection with an effectful function as
