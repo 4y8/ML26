@@ -210,8 +210,9 @@ that adds effect handlers and modalities.
 %
 Modalities may appear directly in types such as $\mu A$, where $\mu$ is a
 modality and $A$ is a type. A value of type $\mu A$ is a value of type $A$ only
-available by first applying the modality $\mu$ to the ambient effect
-context. This transformation acts hereditarily on every arrow in $A$.
+available by first applying the modality $\mu$ to the ambient effect context. As
+such a modality modifies the ambient effect context, it acts hereditarily on
+every arrow in $A$.
 %
 For instance, the \textsf{map} function has the following type, where $[]$ is a
 modality that indicates that the function does not perform any effect.
@@ -223,8 +224,8 @@ input effect context with $E$.
 %
 Replacing the ambient effect context by the empty one may seem overly
 restrictive. However, when we instantiate \textsf{map} and eliminate the
-modality we may soundly upcast the empty effect to whatever the ambient effect
-context happens to be.
+modality we may soundly upcast the empty effect context to whatever the ambient
+effect context happens to be.
 %
 %% In general, $[E]$ denotes an \emph{absolute} modality, which overwrites the
 %% input effect context with $E$.
@@ -271,7 +272,7 @@ inconvenient, writing explicit introduction and elimination forms for modalities
 is too.
 %
 The original \Met paper~\cite{tang2025modal} provides a bidirectional algorithm
-that translates a surface language called \Metl into \Met. To dinstiguish it
+that translates a surface language called \Metl into \Met; to dinstiguish it
 from the languages we will introduce later, we will refer to the original \Metl
 as \MetlF. But this algorithm only infers modalities: \MetlF still requires
 explicit type applications for value polymorphism.
@@ -313,7 +314,7 @@ Then, checking the argument against $\forall b.b\to b\times\textsf{list
 
 As noted in previous work on \Met, elimination and introduction of modalities is
 reminiscent of instantiation and generalisation in type inference~\cite[Section
-  7]{tang2025modal}. Following this analogy, universal ghosts allows \Frost to
+  7]{tang2025modal}. Following this analogy, universal ghosts allow \Frost to
 treat quantifiers and modalities with similar rules.
 
 We will review a toy programming language which extends \Frost to infer modal
@@ -337,9 +338,9 @@ type inference based on \Frost. They are all available
 \href{https://github.com/4y8/modal-effect-types/}{online} and this last
 implementation also has a
 \href{https://www.normalesup.org/~boussaa/met/playground/}{web interface}. The
-web page features several effectful examples. They all only need require
-top-level type annotations to type check. This makes us believe that \MetlFrost
-is a usable surface language for modal effect types.
+web page features several effectful programs as examples. They all only need
+require top-level type annotations to type check. This makes us believe that
+\MetlFrost is a usable surface language for modal effect types.
 
 The new subtyping and unification rules for modalities look like the ones for
 forall quantifiers. But they are more involved as modalities hold more
