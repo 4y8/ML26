@@ -299,45 +299,49 @@ typing algorithm for first-class polymorphism.
 
 \subsection{\Frost type inference}
 The usual way to type check an application with a bidirectional type system is
-to, first, infer the type of the function and then use this type to check the
+to first infer the type of the function and then use this type to check the
 argument~\cite{dunfield2013complete, greedy2023, jiang2025bidirectional}. Less
-commonly, some type systems allow the information to flow from the argument to
-the function~\cite{pierce2000local, xie2018let}.
+commonly, some type systems allow information to flow from the argument to the
+function~\cite{pierce2000local, xie2018let}.
 
 \Frost supports information flow in both directions~\cite{tang2025ML}. To do so,
-the type system relies on \emph{skeletons}. Skeletons are types haunted by
-\emph{ghosts} ($\Hole$) and \emph{universal ghosts} ($\TopHole$),
-i.e.\ skeletons are types with holes in type or quantifier position. When type
-checking an application, the rule infers a skeleton for the argument, uses that
-skeleton to infer a type for the function and checks the argument against the
-function type's argument. The skeleton allows information flow from the argument
-to the function before it flows in the other direction.
+the type system relies on \emph{skeletons}. Skeletons are types augmented with
+\emph{ghosts} ($\Hole$) and \emph{universal ghosts} ($\TopHole$). Ghosts and
+universal ghosts amount to special forms of holes which appear in type or
+quantifier position respectively. The typing rules for applications infers a
+skeleton for the argument, uses the skeleton to infer a type for the function,
+then checks the argument against the function type's argument. The skeleton
+allows information flow from argument to function before the flow is reversed.
 
-For instance, consider two variables $\textsf{poly'}:\forall a.(\forall b. b\to
-b\times a)\to a$ and $\textsf{ids}:\textsf{list }(\forall a.a\to a)$. \Frost
-infers the type $\textsf{list }(\forall a.a\to a)$ for the expression
-$\textsf{poly'} (\lambda x. (x, \textsf{ids}))$.
+For instance, consider $\textsf{poly'}:\forall a.(\forall b. b\to b\times a)\to
+a$ and $\textsf{ids}:\textsf{list }(\forall a.a\to a)$. \Frost infers the type
+$\textsf{list }(\forall a.a\to a)$ for the expression $\textsf{poly'} (\lambda
+x. (x, \textsf{ids}))$.
 %
 First, the skeleton $\TopHole.\Hole\to\Hole\times(\TopHole.\textsf{list
 }(\forall a.a\to a))$ of the argument instantiates the function's type variable
 $a$ to $\textsf{list }(\forall a.a\to a)$.
 %
 Then, checking the argument against $\forall b.b\to b\times\textsf{list
-}(\forall a.a\to a)$ wraps the argument in a type abstraction.
+}(\forall a.a\to a)$, wraps the argument in a type abstraction.
 
 As noted in previous work on \Met, elimination and introduction of modalities is
 reminiscent of instantiation and generalisation in type inference~\cite[Section
-  7]{tang2025modal}. Following this analogy, universal ghosts allow \Frost to
+  7]{tang2025modal}. Pursuing this analogy, universal ghosts allow \Frost to
 treat quantifiers and modalities with similar rules.
 
-We will review a toy programming language which extends \Frost to infer modal
-effect types, which we call \MetlFrost. We will use examples in \Met, \MetlF and
-\MetlFrost to demonstrate the capabilities of the latter. Then, we will show
-some limitations of \MetlFrost. More examples, as well as a test suite are
-available \href{https://github.com/4y8/modal-effect-types/tree/frost}{online}.
+We will now outline \MetlFrost, a toy programming language which extends \Frost
+to infer modal effect types. We use examples in \Met, \MetlF and \MetlFrost to
+evaluate the capabilities of the latter and discuss limitations. More examples,
+as well as a test suite are available
+\href{https://github.com/4y8/modal-effect-types/tree/frost}{online}.
 
-\section{Practical programming with Modal Effect Types}
+\section{Programming with Modal Effect Types}
 \subsection{Our implementation}
+
+\sam{We haven't said what effect structures are. I suspect it may be best just
+  to avoid mentioning them in this extended abstract.}
+
 The core language of our implementation is \Met with scoped
 rows~\cite{scopedrows2005} as an effect structure (i.e.\ modalities will have
 scoped rows of effects) with additions such as parametric effects and algebraic
@@ -348,24 +352,42 @@ all support modality inference: a version with explicit type application, one
 with type inference for types without modalities or quantifiers based on an
 algorithm of Dunfield and Krishnaswami~\cite{dunfield2013complete}, and one with
 type inference based on \Frost. They are all available
-\href{https://github.com/4y8/modal-effect-types/}{online} and this last
-implementation also has a
-\href{https://www.normalesup.org/~boussaa/met/playground/}{web interface}. The
-web page features several effectful programs as examples. They all only need
-require top-level type annotations to type check. This makes us believe that
-\MetlFrost is a usable surface language for modal effect types.
+\href{https://github.com/4y8/modal-effect-types/}{online} and the latter also
+has a \href{https://www.normalesup.org/~boussaa/met/playground/}{web
+  interface}. The web page features several effectful programs as examples. They
+all require only top-level type annotations to type check, offering some
+evidence that \MetlFrost is a usable surface language for programming with modal
+effect types.
 
-The new subtyping and unification rules for modalities look like the ones for
-forall quantifiers. But they are more involved as modalities hold more
-information. For instance, unification of two modal types also unifies the two
-top-level modalities.
+\sam{In this section we seem to have started talking about boxing and
+  unboxing. Previously we only used introduction and elimination of modalities.}
 
-\aghilas{I am not sure of how to integrate these paragraphs, if they are
-  relevant} \Met has modality-annotated variable declarations in its contexts:
-$x:_\mu A$, where $A$ can also have a modality. For simplicity's sake, the
-\MetlFrost, like \MetlF, has usual plain bindings $x:\mu G$, and unboxes all the
-modalities of variables. If $G$ has no top-level modality, then we translate
-this binding to $x:_\mu G$ in \Met.
+The new subtyping and unification rules for modalities are much like those for
+universal quantification. However, they are more involved as modalities hold
+more information. For instance, unification of two modal types also unifies the
+two top-level modalities.
+
+%% \aghilas{I am not sure of how to integrate these paragraphs, if they are
+%%   relevant}
+
+\sam{The following paragraph is perhaps still not entirely accurate.}
+%
+\Met has modality-annotated variable declarations in its contexts:
+$x:_\mu A$, where $A$ can also have a modality. For uniformity, \MetlFrost, like
+\MetlF, has plain bindings $x:\mu G$, where $G$ is a type without a top-level
+modality, and implicitly unboxes all modalities on variable types ($x:\mu G$
+represents $x:_\mu G$).
+%
+%% If $G$ has no top-level modality, then we interpret this binding
+%% as $x:_\mu G$ in \Met.
+
+%% arrays
+\newcommand{\ba}{\begin{array}}
+\newcommand{\ea}{\end{array}}
+
+%% lists
+\newcommand{\bl}{\ba[t]{@{}l@{}}}
+\newcommand{\el}{\ea}
 
 \subsection{Iterating on a list}
 The standard iter higher-order function has type $\forall a . []((a \to
@@ -373,19 +395,24 @@ The standard iter higher-order function has type $\forall a . []((a \to
 the absolute modality of $\textsf{iter}\, @a$, where the at sign indicates type
 application.  \aghilas{not sure about the syntax we should use here}
 \[
-\begin{aligned}
+\bl
 \Lambda a^{\textsf{Any}}.\,
-&\keyw{mod}_{[]}.\lambda f^{a\to\textsf{unit}} l^{\textsf{list }a}. \\
-&\keyw{match } l \keyw{ with } \\
-&\quad \mid \textsf{Nil} \to () \\
-&\quad \mid \textsf{Cons}(hd,tl) \to
-   \keyw{let\ mod}^{\langle\rangle}\_ = f\,hd \keyw{\ in } \\
-&\qquad\qquad
-   \keyw{let\ mod}^{[]} i = \textsf{iter}\, @a
-   \keyw{\ in } \\
-&\qquad\qquad
-   i\,f\,tl
-\end{aligned}
+  \bl
+  \keyw{mod}_{[]}.\lambda f^{a\to\textsf{unit}}\,l^{\textsf{list }a}. \\
+  \keyw{match}\; l \;\keyw{with} \\
+  \quad
+    \bl
+    \mid \textsf{Nil} \to () \\
+    \mid \textsf{Cons}(hd,tl) \to
+    \keyw{let\;mod}^{\langle\rangle}\_ = f\,hd \;\keyw{in} \\
+    \qquad
+       \bl
+       \keyw{let\;mod}^{[]}\; i = \textsf{iter}\, @a \;\keyw{in}\; \\
+        i\,f\,tl
+       \el
+    \el
+  \el
+\el
 \]
 %% \[
 %% \Lambda a^{\textsf{Any}}.\keyw{mod}_{[]}\lambda f^{a\to\textsf{unit}} l^{\textsf{list }a}.\keyw{match } l \keyw{ with }\textsf{Nil}\to () \mid \textsf{Cons}(hd, tl)\to
@@ -394,8 +421,9 @@ application.  \aghilas{not sure about the syntax we should use here}
 %% i\; f\; tl
 %% \]
 
-The type in \MetlF and \MetlFrost is the same as the \Met one. The
-bidirectionnal type system of \MetlF avoids explicit modality elimination.
+The type for \MetlF and \MetlFrost is the same as the \Met one.
+%
+\MetlF avoids explicit modality elimination.
 \begin{lstlisting}[style=metl]
   val iter : forall a . []((a -> unit) -> unit)
   let iter f l =
@@ -404,7 +432,7 @@ bidirectionnal type system of \MetlF avoids explicit modality elimination.
     | Cons (hd, tl) -> f hd; iter @a f tl
     end
 \end{lstlisting}
-And \MetlFrost removes the type application.
+\MetlFrost removes the type application.
 \begin{lstlisting}[style=metl]
     | Cons (hd, tl) -> f hd; iter f tl
 \end{lstlisting}
