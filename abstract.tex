@@ -95,6 +95,7 @@
 %% ... up to here
 
 \title{Practical programming with Modal Effect Types}
+%% SL: we can save some space by getting rid of this subtitle
 \subtitle{Research Presentation}
 \settopmatter{authorsperrow=3}
 
@@ -135,7 +136,8 @@
 \email{sam.lindley@ed.ac.uk}
 \affiliation{%
   \institution{The University of Edinburgh}
-  \country{UK}}
+  \country{UK}
+}
 
 \begin{document}
 \sloppy
@@ -393,7 +395,13 @@ represents $x:_\mu G$).
 The standard iter higher-order function has type $\forall a . []((a \to
 \textsf{unit})\to \textsf{unit})$ in \Met. To call itself, the function unboxes
 the absolute modality of $\textsf{iter}\, @a$, where the at sign indicates type
-application.  \aghilas{not sure about the syntax we should use here}
+application.
+%
+\aghilas{not sure about the syntax we should use here}
+%
+\sam{I think this syntax is probably fine, but we should probably say something
+  about switching to an ASCII syntax for the surface languages.}
+%
 \[
 \bl
 \Lambda a^{\textsf{Any}}.\,
