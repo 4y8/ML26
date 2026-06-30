@@ -155,37 +155,48 @@
   However, the practical implementation of modal effect types, and in particular
   how to infer modalities, remains largely unexplored.
 
-  We overview our implementation of a toy ML-like programming language with
-  modal effect types.
+  We outline our implementation of a toy ML-like programming language with modal
+  effect types.
 %
-  Our main novelty is that we extend \Frost, a new type inference algorithm for
-  first-class polymorphism, to infer first-class modalities.
+  Our main novelty is that we extend \Frost, a novel bidirectionally-typed
+  calculus of first-class polymorphism, to infer first-class modalities.
 \end{abstract}
 \maketitle
 \section{Introduction}
 \subsection{Existing type-and-effect systems}
-To take effects into account in the type system, traditional languages such as
-Koka~\cite{koka2014} annotate arrows with the effects the function can
-perform. Therefore, each function inherits, in its signature, the effects of its
-callees. This becomes cumbersome when typing higher-order functions and is an
-obstacle to backward compatibility. For instance, if we annotate arrows with the
-effects they can perform between square brackets, the function \lstinline{map} has
-the following type, even though it does not perform any effect itself.
+Traditional languages with effect type systems, such as Koka~\cite{koka2014},
+annotate each arrow with the effects a function of this type may
+perform. Consequently, each function inherits, in its type signature, the
+effects of its callees. This becomes cumbersome when typing higher-order
+functions, and is an obstacle to backward compatibility (adding effect typing to
+an existing language requires changing the type signatures of all higher-order
+functions). For instance (annotating arrows with effects in square brackets),
+the function \lstinline{map} has the following type, even though it performs no
+effects directly.
 \begin{lstlisting}[style=metl]
   forall e . (list a, a ->[e] b) ->[e] list b
 \end{lstlisting}
 The effect variable \lstinline{e} allows \lstinline{map} to take any effectful
-function as argument. Syntactic sugar can simplify such signatures, as
-demonstrated by Frank~\cite{frank2020}. But relying on syntax makes the system
-fragile.
-
-The language Effekt~\cite{effekt2020} solves this problem with a
+function as an argument.
+%
+Syntactic sugar can simplify such signatures, as demonstrated by
+Frank~\cite{frank2020}. But relying on syntax makes the system fragile.
+%
+The language Effekt~\cite{effekt2020} mitigates this problem with a
 \emph{capability} based system. However, to guarantee effect-safety, functions
-become second-class objects, which hinders backward compatibility.
+become second-class objects, which hinders backwards compatibility.
+
+%% SL: I think when we mention ``backwards compatibility'' here we're alluding
+%% to the idea that one might wish to extend an existing language with support
+%% for effect typing. But we haven't spelled this out here, so it will likely be
+%% confusing to readers.
+%
+%% SL: I've added a parenthetical explanation of this
+
 
 \subsection{Modal Effect Types}
 
-\sam{Introduce the \Met calculus!}
+%% \sam{Introduce the \Met calculus!}
 
 %% \sam{We need to explain \emph{how} the modality $[]$ modifies the
 %%   ambient effect context here - and in particular how conceptually it
@@ -209,10 +220,9 @@ The \Met core calculus implements these ideas. It is an extension of System F
 that adds effect handlers and modalities.
 %
 Modalities may appear directly in types such as $\mu A$, where $\mu$ is a
-modality and $A$ is a type. A value of type $\mu A$ is a value of type $A$ only
-available by first applying the modality $\mu$ to the ambient effect context. As
-such a modality modifies the ambient effect context, it acts hereditarily on
-every arrow in $A$.
+modality and $A$ is a type. A value of type $\mu A$ is a value of type $A$ whose
+effects are those of the ambient effect context transformed by the modality
+$\mu$. A modality acts hereditarily on every arrow in $A$.
 %
 For instance, the \textsf{map} function has the following type, where $[]$ is a
 modality that indicates that the function does not perform any effect.
@@ -220,7 +230,7 @@ modality that indicates that the function does not perform any effect.
   \forall a b . []((a \to b) \to \textsf{list } a \to \textsf{list } b)
 \]
 In general, $[E]$ denotes an \emph{absolute} modality, which overwrites the
-input effect context with $E$.
+ambient effects with $E$.
 %
 Replacing the ambient effect context by the empty one may seem overly
 restrictive. However, when we instantiate \textsf{map} and eliminate the
@@ -252,16 +262,19 @@ handlers.
 
 \Met provides explicit constructs for introducing and eliminating modalities.
 %
-At the term level, the $\keyw{mod}_\mu$ and $\keyw{let mod}_\mu$ constructs
-respectively introduce and eliminate modality $\mu$. For example, the following
-expression performs explicit subeffecting of a variable $x:[](\textsf{int}
-\to\textsf{int})$ in any effect context:
+The $\keyw{mod}_\mu$ and $\keyw{let mod}_\mu$ constructs respectively introduce
+and eliminate modality $\mu$. For example, the following term upcasts a pure
+function $x:[](\textsf{int} \to\textsf{int})$:
 \[
 \left(\keyw{let mod}_{[]} y = x \keyw{ in } \keyw{mod}_{[E]} y\right) : [E](\textsf{int} \to\textsf{int})
 \]
-The $\keyw{mod}_\mu V$ expression modifies the effect context of the value $V$
-by applying modality $\mu$. Let-bindings allow us to retrieve the original
-value: $\keyw{let mod}_\mu x = \keyw{mod}_\mu V \keyw{ in } x$ reduces to $V$.
+%
+%% SL: I'm not sure that the following really adds much, so I've commented it
+%% out for now.
+%
+%% The $\keyw{mod}_\mu V$ expression modifies the effect context of the value $V$
+%% by applying modality $\mu$. Let-bindings allow us to retrieve the original
+%% value: $\keyw{let mod}_\mu x = \keyw{mod}_\mu V \keyw{ in } x$ reduces to $V$.
 %
 See~\cite{tang2025modal, tang2026modal} for a complete introduction to modal
 effect types.
