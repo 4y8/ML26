@@ -76,6 +76,7 @@
 \newcommand{\Metl}{\textsc{Metl}\xspace}
 %% AB: probably change this name
 \newcommand{\MetlFrost}{\text{Frost-}\textsc{Metl}\xspace}
+\newcommand{\MetlDK}{\text{DK-}\textsc{Metl}\xspace}
 \newcommand{\Frost}{\text{Frost}\xspace}
 \newcommand{\MetlF}{\text{F-}\textsc{Metl}\xspace}
 %%
@@ -231,11 +232,11 @@ modality that indicates that the function does not perform any effect.
   \forall a b . []((a \to b) \to \textsf{list } a \to \textsf{list } b)
 \]
 In general, $[E]$ denotes an \emph{absolute} modality, which overwrites the
-ambient effects with $E$.
+ambient effect context with $E$.
 %
 Replacing the ambient effect context by the empty one may seem overly
-restrictive. However, we can instantiate \textsf{map} and eliminate the
-modality in any effect context.
+restrictive. However, we can instantiate \textsf{map} and eliminate the modality
+in any effect context.
 %
 %% In general, $[E]$ denotes an \emph{absolute} modality, which overwrites the
 %% input effect context with $E$.
@@ -255,10 +256,9 @@ modality in any effect context.
 %% performs an effect, then this effect comes from the ambient context of one of
 %% the parent computations.
 %
-\Met also provides another kind of modality: a \emph{relative} modality $\langle
-L|D\rangle$ removes the effects in $L$ from the ambient effect context before
-adding the effects in $D$. Relative modalities are important for typing effect
-handlers.
+\Met also provides a \emph{relative} modality $\langle L|D\rangle$, which
+removes the effects in $L$ from the ambient effect context before adding the
+effects in $D$. Relative modalities are important for typing effect handlers.
 
 \Met provides the $\keyw{mod}_\mu$ and $\keyw{let mod}_\mu$ constructs, that
 respectively introduce and eliminate modality $\mu$. For example, the following
@@ -277,16 +277,15 @@ term upcasts a pure function $x:[](\textsf{int} \to\textsf{int})$:
 See~\cite{tang2025modal, tang2026modal} for a complete introduction to modal
 effect types.
 
-
 Just as writing explicit type abstractions and type applications in programs is
 inconvenient, writing explicit modality introduction and modality elimination is
 too.
 %
-The original \Met paper~\cite{tang2025modal} provides a bidirectional algorithm
-that translates a surface language called \Metl into \Met; to dinstiguish it
-from the languages we will introduce later, we will refer to \Metl as
-\MetlF. But this algorithm only infers modalities: \MetlF requires
-explicit type applications for value polymorphism.
+The original \Met paper~\cite{tang2025modal} describes a bidirectional typing
+algorithm that translates a surface language, \Metl, into \Met. To distinguish
+variants of \Metl we introduce later, we here refer to the original \Metl as
+\MetlF. The algorithm only infers modalities: \MetlF requires explicit type
+applications for value polymorphism.
 %
 A central aim of our work is to combine modality inference with a bidirectional
 typing algorithm for first-class polymorphism.
@@ -327,30 +326,38 @@ As noted in previous work on \Met, elimination and introduction of modalities is
 reminiscent of instantiation and generalisation in type inference~\cite[Section
   7]{tang2025modal}. Pursuing this analogy, universal ghosts allow \Frost to
 treat quantifiers and modalities with similar rules.
-
-We will now outline \MetlFrost, a toy programming language which extends \Frost
-to infer modal effect types. We use examples in \Met, \MetlF and \MetlFrost to
-evaluate the capabilities of the latter and discuss limitations.
+%
+We next outline \MetlFrost, a toy programming language which extends \Frost
+to infer modal effect types.
+%
+We evaluate its capabilities and limitations by way of examples in \Met, \MetlF
+and \MetlFrost.
 
 \section{Programming with Modal Effect Types}
-\subsection{Our implementation}
+\subsection{Implementation}
 %%\sam{We haven't said what effect structures are. I suspect it may be best just
 %%  to avoid mentioning them in this extended abstract.}
-The core language of our implementations is \Met with scoped rows of effects for
+The core of our implementations is based on \Met with scoped rows of effects for
 modalities~\cite{scopedrows2005} with additions such as parametric effects and
-algebraic data types. We have implemented three surface languages, which all
-support modality inference: \MetlF, one with type inference for types without
-modalities or quantifiers based on an algorithm of Dunfield and
-Krishnaswami~\cite{dunfield2013complete}, and \MetlFrost. They are all available
-\href{https://github.com/4y8/modal-effect-types/}{online} and the latter also
-has a \href{https://www.normalesup.org/~boussaa/met/playground/}{web
-  interface}. The web page features several effectful programs as examples. They
+algebraic data types. The implementation supports three surface languages, all
+of which provide modality inference: \MetlF, \MetlDK (which incorporates Dunfeld
+and Krishnaswami's bidirectional typing algorithm for higher-rank
+polymorphism~\cite{dunfield2013complete}), and \MetlFrost.
+%
+The implementation is available online~\cite{metl-implementation}
+%% \href{https://github.com/4y8/modal-effect-types/}{online}
+and the \MetlFrost
+also has a web interface~\cite{metl-web}.
+%% \href{https://www.normalesup.org/~boussaa/met/playground/}{web
+%%   interface}.
+%
+The web page features several effectful programs as examples. They
 all require only top-level type annotations to type check, offering some
-evidence that \MetlFrost is a usable surface language for programming with modal
-effect types.
+evidence that \MetlFrost can provide an ergonomic surface language for
+programming with modal effect types.
 
-\sam{In this section we seem to have started talking about boxing and
-  unboxing. Previously we only used introduction and elimination of modalities.}
+%% \sam{In this section we seem to have started talking about boxing and
+%%   unboxing. Previously we only used introduction and elimination of modalities.}
 
 The new subtyping and unification rules for modalities are much like those for
 universal quantification. However, they are more involved as modalities hold
@@ -385,26 +392,25 @@ The standard iter function has type $\forall a . []((a \to
 \textsf{unit})\to \textsf{unit})$ in \Met. To call itself, the function
 eliminates the modality of $\textsf{iter}\, @a$, where the at sign
 indicates type application.
-\sam{I think this syntax is probably fine, but we should probably say something
-  about switching to an ASCII syntax for the surface languages.}
+%% \sam{I think this syntax is probably fine, but we should probably say something
+%%   about switching to an ASCII syntax for the surface languages.}
 \[
 \small
 \bl
-\Lambda a^{\textsf{Any}}.\,
+\Lambda a^{\textsf{Any}}.\,\keyw{mod}_{[]}
+  (\lambda f^{a\to\textsf{unit}}\,l^{\textsf{list }a}.
   \bl
-  \keyw{mod}_{[]}.\lambda f^{a\to\textsf{unit}}\,l^{\textsf{list }a}. \\
-  \keyw{match}\; l \;\keyw{with} \\
-  \quad
-    \bl
-    \mid \textsf{Nil} \to () \\
-    \mid \textsf{Cons}(hd,tl) \to
-    \keyw{let\;mod}_{\langle\rangle}\_ = f\,hd \;\keyw{in} \\
-    \qquad
-       \bl
-       \keyw{let\;mod}_{[]}\; i = \textsf{iter}\, @a \;\keyw{in}\; \\
-        i\,f\,tl
-       \el
-    \el
+    \keyw{match}\; l \;\keyw{with} \\
+    \quad
+      \bl
+      \mid \textsf{Nil} \to () \\
+      \mid \textsf{Cons}(hd,tl) \to \\
+      \quad
+         \bl
+         \keyw{let\;mod}_{[]}\; i = \textsf{iter}\, @a \;\keyw{in}\; \\
+         f\,hd; i\,f\,tl)
+         \el
+      \el
   \el
 \el
 \]
@@ -415,8 +421,8 @@ indicates type application.
 %% i\; f\; tl
 %% \]
 
-The type for \MetlF and \MetlFrost is the same as the \Met one. We switch to an
-ASCII syntax to represent programs in surface languages.
+The type for \MetlF and \MetlFrost is the same as for \Met. We switch to an
+ASCII syntax for programs in surface languages.
 %
 \MetlF avoids explicit modality elimination.
 \begin{lstlisting}[style=metl]
@@ -429,19 +435,18 @@ ASCII syntax to represent programs in surface languages.
 \MetlFrost removes the type application, and the recursive call becomes
 \lstinline[style=metl]{iter f tl}.
 
-\subsection{Searching a list with effects}
+\subsection{Searching a list using an effectful function}
 Calling the iterator from the last subsection with an effectful function as
 argument can search a list, thanks to the parametric effect below.
 \begin{lstlisting}[style=metl]
   eff gen [a] = yield : a => unit
 \end{lstlisting}
 The declaration above defines a parametric effect \lstinline[style=metl]{gen}
-with a single operation \lstinline[style=metl]{yield}. The brackets around the
-parameter \lstinline[style=metl]{a} indicate that it has kind \textsf{Abs}, the
-kind of types whose meaning is independent from the ambient effect
-context. There is another kind, \textsf{Any}, that includes all types. To avoid
-effect leakage, the types of inputs and outputs of operations have kind
-\textsf{Abs}.
+with a single operation \lstinline[style=metl]{yield}. The brackets around
+\lstinline[style=metl]{a} indicate that it has \emph{absolute} kind, the kind of
+types whose meaning is independent from the ambient effect context. The default
+kind includes all types. To avoid effect leakage, the types of inputs and
+outputs of operations have absolute kind.
 
 Once again, \MetlF requires no explicit modality introduction or elimination.
 \begin{lstlisting}[style=metl]
@@ -458,10 +463,10 @@ The angle brackets that follow the \lstinline[style=metl]{handle} keyword
 provide a parameter for the effect \lstinline[style=metl]{gen}. \Frost removes
 the need for this annotation, as well as for the explicit type application.
 
-\subsection{Some limitations}
+\subsection{Limitations}
 \paragraph{Syntactic treatment of quantifiers}
-Our current unification rules have a syntactic treatment of quantifiers. We can
-unify neither $[l]\langle l'\rangle(\textsf{unit}\to\textsf{unit})$ and $[l',
+Our unification rules treat quantifiers syntactically. We can unify neither
+$[l]\langle l'\rangle(\textsf{unit}\to\textsf{unit})$ and $[l',
   l](\textsf{unit}\to\textsf{unit})$, nor $\forall a b . a \times b$ and
 $\forall b a . a \times b$, though they are each subtypes of one another.
 
@@ -469,13 +474,13 @@ $\forall b a . a \times b$, though they are each subtypes of one another.
 The type inference rule for lambda abstractions introduces a fresh type variable
 for the argument. As the system lacks kind inference, the kind of this variable
 is \textsf{Any} to be permissive. Consequently, functions that require their
-argument to be pure need to appear in a context that specifies the kind of the
+argument to be absolute need to appear in a context that specifies the kind of the
 argument's type. For instance, the \lstinline[style=metl]{find} function above
 does not type check without the top-level annotation, which makes the function
-polymorphic in a pure type variable.
+polymorphic in an absolute type variable.
 
-\sam{This explanation is too fuzzy. I don't know what aspect of the type
-  annotation it refers to or what the variable x has to do with it.}
+%% \sam{This explanation is too fuzzy. I don't know what aspect of the type
+%%   annotation it refers to or what the variable x has to do with it.}
 
 \subsection{Conclusion and future work}
 The extension of \Frost to modal effect types is a promising approach to
