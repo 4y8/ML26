@@ -96,7 +96,7 @@
 
 \title{Practical programming with Modal Effect Types}
 %% SL: we can save some space by getting rid of this subtitle
-\subtitle{Research Presentation}
+%\subtitle{Research Presentation}
 \settopmatter{authorsperrow=3}
 
 \author{Aghilas Y. Boussaa}
@@ -151,11 +151,11 @@
   signatures for higher-order functions.
 %
   Modal effect types use modalities to give modular and succinct types to
-  higher-order functions, reducing the need for effect variables meanwhile still
-  allowing higher-order functions to be instantiated with different effects.
+  higher-order functions, reducing the need for effect variables without
+  compromising on expressivity.
 %
   However, the practical implementation of modal effect types, and in particular
-  how to infer modalities, remains largely unexplored.
+  modality inference, remains largely unexplored.
 
   We outline our implementation of a toy ML-like programming language with modal
   effect types.
@@ -197,7 +197,6 @@ become second-class objects, which hinders backwards compatibility.
 
 
 \subsection{Modal Effect Types}
-
 %% \sam{Introduce the \Met calculus!}
 
 %% \sam{We need to explain \emph{how} the modality $[]$ modifies the
@@ -223,8 +222,8 @@ that adds effect handlers and modalities.
 %
 Modalities may appear directly in types such as $\mu A$, where $\mu$ is a
 modality and $A$ is a type. A value of type $\mu A$ is a value of type $A$ whose
-effects are those of the ambient effect context transformed by the modality
-$\mu$. A modality acts hereditarily on every arrow in $A$.
+effect context is the ambient one transformed by the modality $\mu$. A modality
+acts hereditarily on every arrow in $A$.
 %
 For instance, the \textsf{map} function has the following type, where $[]$ is a
 modality that indicates that the function does not perform any effect.
@@ -235,9 +234,8 @@ In general, $[E]$ denotes an \emph{absolute} modality, which overwrites the
 ambient effects with $E$.
 %
 Replacing the ambient effect context by the empty one may seem overly
-restrictive. However, when we instantiate \textsf{map} and eliminate the
-modality we may soundly upcast the empty effect context to whatever the ambient
-effect context happens to be.
+restrictive. However, we can instantiate \textsf{map} and eliminate the
+modality in any effect context.
 %
 %% In general, $[E]$ denotes an \emph{absolute} modality, which overwrites the
 %% input effect context with $E$.
@@ -262,11 +260,9 @@ L|D\rangle$ removes the effects in $L$ from the ambient effect context before
 adding the effects in $D$. Relative modalities are important for typing effect
 handlers.
 
-\Met provides explicit constructs for introducing and eliminating modalities.
-%
-The $\keyw{mod}_\mu$ and $\keyw{let mod}_\mu$ constructs respectively introduce
-and eliminate modality $\mu$. For example, the following term upcasts a pure
-function $x:[](\textsf{int} \to\textsf{int})$:
+\Met provides the $\keyw{mod}_\mu$ and $\keyw{let mod}_\mu$ constructs, that
+respectively introduce and eliminate modality $\mu$. For example, the following
+term upcasts a pure function $x:[](\textsf{int} \to\textsf{int})$:
 \[
 \left(\keyw{let mod}_{[]} y = x \keyw{ in } \keyw{mod}_{[E]} y\right) : [E](\textsf{int} \to\textsf{int})
 \]
@@ -283,13 +279,13 @@ effect types.
 
 
 Just as writing explicit type abstractions and type applications in programs is
-inconvenient, writing explicit introduction and elimination forms for modalities
-is too.
+inconvenient, writing explicit modality introduction and modality elimination is
+too.
 %
 The original \Met paper~\cite{tang2025modal} provides a bidirectional algorithm
 that translates a surface language called \Metl into \Met; to dinstiguish it
-from the languages we will introduce later, we will refer to the original \Metl
-as \MetlF. But this algorithm only infers modalities: \MetlF still requires
+from the languages we will introduce later, we will refer to \Metl as
+\MetlF. But this algorithm only infers modalities: \MetlF requires
 explicit type applications for value polymorphism.
 %
 A central aim of our work is to combine modality inference with a bidirectional
@@ -306,8 +302,8 @@ argument~\cite{dunfield2013complete, greedy2023, jiang2025bidirectional}. Less
 commonly, some type systems allow information to flow from the argument to the
 function~\cite{pierce2000local, xie2018let}.
 
-\Frost supports information flow in both directions~\cite{tang2025ML}. To do so,
-the type system relies on \emph{skeletons}. Skeletons are types augmented with
+\Frost supports information flow in both directions using
+\emph{skeletons}~\cite{tang2025ML}. Skeletons are types augmented with
 \emph{ghosts} ($\Hole$) and \emph{universal ghosts} ($\TopHole$). Ghosts and
 universal ghosts amount to special forms of holes which appear in type or
 quantifier position respectively. The typing rules for applications infers a
@@ -334,26 +330,18 @@ treat quantifiers and modalities with similar rules.
 
 We will now outline \MetlFrost, a toy programming language which extends \Frost
 to infer modal effect types. We use examples in \Met, \MetlF and \MetlFrost to
-evaluate the capabilities of the latter and discuss limitations. More examples,
-as well as a test suite are available
-\href{https://github.com/4y8/modal-effect-types/tree/frost}{online}.
+evaluate the capabilities of the latter and discuss limitations.
 
 \section{Programming with Modal Effect Types}
 \subsection{Our implementation}
-
-\sam{We haven't said what effect structures are. I suspect it may be best just
-  to avoid mentioning them in this extended abstract.}
-
-The core language of our implementation is \Met with scoped
-rows~\cite{scopedrows2005} as an effect structure (i.e.\ modalities will have
-scoped rows of effects) with additions such as parametric effects and algebraic
-data types.
-
-We have implemented three surface languages for this extension of \Met, which
-all support modality inference: a version with explicit type application, one
-with type inference for types without modalities or quantifiers based on an
-algorithm of Dunfield and Krishnaswami~\cite{dunfield2013complete}, and one with
-type inference based on \Frost. They are all available
+%%\sam{We haven't said what effect structures are. I suspect it may be best just
+%%  to avoid mentioning them in this extended abstract.}
+The core language of our implementations is \Met with scoped rows of effects for
+modalities~\cite{scopedrows2005} with additions such as parametric effects and
+algebraic data types. We have implemented three surface languages, which all
+support modality inference: \MetlF, one with type inference for types without
+modalities or quantifiers based on an algorithm of Dunfield and
+Krishnaswami~\cite{dunfield2013complete}, and \MetlFrost. They are all available
 \href{https://github.com/4y8/modal-effect-types/}{online} and the latter also
 has a \href{https://www.normalesup.org/~boussaa/met/playground/}{web
   interface}. The web page features several effectful programs as examples. They
@@ -366,19 +354,20 @@ effect types.
 
 The new subtyping and unification rules for modalities are much like those for
 universal quantification. However, they are more involved as modalities hold
-more information. For instance, unification of two modal types also unifies the
-two top-level modalities.
+more information. For instance, unification of two modal types starts with the
+unification of the two top-level modalities.
 
 %% \aghilas{I am not sure of how to integrate these paragraphs, if they are
 %%   relevant}
 
-\sam{The following paragraph is perhaps still not entirely accurate.}
-%
-\Met has modality-annotated variable declarations in its contexts:
-$x:_\mu A$, where $A$ can also have a modality. For uniformity, \MetlFrost, like
-\MetlF, has plain bindings $x:\mu G$, where $G$ is a type without a top-level
-modality, and implicitly unboxes all modalities on variable types ($x:\mu G$
-represents $x:_\mu G$).
+%% \sam{The following paragraph is perhaps still not entirely accurate.}
+%% %
+%% \Met has modality-annotated variable declarations in its contexts:
+%% $x:_\mu A$, where $A$ can also have a modality. For uniformity, \MetlFrost, like
+%% \MetlF, has plain bindings $x:\mu G$, where $G$ is a type without a top-level
+%% modality, and implicitly eliminates all modalities on variable types ($x:\mu G$
+%% represents $x:_\mu G$).
+
 %
 %% If $G$ has no top-level modality, then we interpret this binding
 %% as $x:_\mu G$ in \Met.
@@ -392,16 +381,12 @@ represents $x:_\mu G$).
 \newcommand{\el}{\ea}
 
 \subsection{Iterating on a list}
-The standard iter higher-order function has type $\forall a . []((a \to
-\textsf{unit})\to \textsf{unit})$ in \Met. To call itself, the function unboxes
-the absolute modality of $\textsf{iter}\, @a$, where the at sign indicates type
-application.
-%
-\aghilas{not sure about the syntax we should use here}
-%
+The standard iter function has type $\forall a . []((a \to
+\textsf{unit})\to \textsf{unit})$ in \Met. To call itself, the function
+eliminates the modality of $\textsf{iter}\, @a$, where the at sign
+indicates type application.
 \sam{I think this syntax is probably fine, but we should probably say something
   about switching to an ASCII syntax for the surface languages.}
-%
 \[
 \bl
 \Lambda a^{\textsf{Any}}.\,
@@ -412,10 +397,10 @@ application.
     \bl
     \mid \textsf{Nil} \to () \\
     \mid \textsf{Cons}(hd,tl) \to
-    \keyw{let\;mod}^{\langle\rangle}\_ = f\,hd \;\keyw{in} \\
+    \keyw{let\;mod}_{\langle\rangle}\_ = f\,hd \;\keyw{in} \\
     \qquad
        \bl
-       \keyw{let\;mod}^{[]}\; i = \textsf{iter}\, @a \;\keyw{in}\; \\
+       \keyw{let\;mod}_{[]}\; i = \textsf{iter}\, @a \;\keyw{in}\; \\
         i\,f\,tl
        \el
     \el
@@ -429,21 +414,19 @@ application.
 %% i\; f\; tl
 %% \]
 
-The type for \MetlF and \MetlFrost is the same as the \Met one.
+The type for \MetlF and \MetlFrost is the same as the \Met one. We switch to an
+ASCII syntax to represent programs in surface languages.
 %
 \MetlF avoids explicit modality elimination.
 \begin{lstlisting}[style=metl]
   val iter : forall a . []((a -> unit) -> unit)
-  let iter f l =
-    match l with
+  let iter f l = match l with
     | Nil -> ()
     | Cons (hd, tl) -> f hd; iter @a f tl
     end
 \end{lstlisting}
-\MetlFrost removes the type application.
-\begin{lstlisting}[style=metl]
-    | Cons (hd, tl) -> f hd; iter f tl
-\end{lstlisting}
+\MetlFrost removes the type application, and the recursive call becomes
+\lstinline[style=metl]{iter f tl}.
 
 \subsection{Searching a list with effects}
 Calling the iterator from the last subsection with an effectful function as
@@ -453,18 +436,17 @@ argument can search a list, thanks to the parametric effect below.
 \end{lstlisting}
 The declaration above defines a parametric effect \lstinline[style=metl]{gen}
 with a single operation \lstinline[style=metl]{yield}. The brackets around the
-parameter \lstinline[style=metl]{a} indicate that it has kind \textsf{Abs}: the
+parameter \lstinline[style=metl]{a} indicate that it has kind \textsf{Abs}, the
 kind of types whose meaning is independent from the ambient effect
-context. There is another kind, called \textsf{Any}, that includes all types. To
-avoid effect leakage, the types of inputs and outputs of operations have kind
+context. There is another kind, \textsf{Any}, that includes all types. To avoid
+effect leakage, the types of inputs and outputs of operations have kind
 \textsf{Abs}.
 
 Once again, \MetlF requires no explicit modality introduction or elimination.
 \begin{lstlisting}[style=metl]
   val find :
     forall [a] . []((a -> bool) -> list a -> option a)
-  let find p l =
-    handle<gen a> iter @a
+  let find p l = handle<gen a> iter @a
       (fun x -> if mask<gen> (p x) then do yield x else ())
       l with
     | return _ => None
@@ -485,10 +467,11 @@ $\forall b a . a \times b$, though they are each subtypes of one another.
 \paragraph{Lack of kind inference}
 The type inference rule for lambda abstractions introduces a fresh type variable
 for the argument. As the system lacks kind inference, the kind of this variable
-is \textsf{Any} to be permissive. Consequently, functions that take pure values
-require annotation. For instance, the \lstinline[style=metl]{find} function
-above does not type check without the top-level annotation because the variable
-\lstinline[style=metl]{x} is not pure.
+is \textsf{Any} to be permissive. Consequently, functions that require their
+argument to be pure need to appear in a context that specifies the kind of the
+argument. For instance, the \lstinline[style=metl]{find} function above does not
+type check without the top-level annotation, which makes the function
+polymorphic in a pure type variable.
 
 \sam{This explanation is too fuzzy. I don't know what aspect of the type
   annotation it refers to or what the variable x has to do with it.}
