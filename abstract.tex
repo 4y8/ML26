@@ -321,7 +321,7 @@ First, the skeleton $\TopHole.\Hole\to\Hole\times(\TopHole.\textsf{list
 $a$ to $\textsf{list }(\forall a.a\to a)$.
 %
 Then, checking the argument against $\forall b.b\to b\times\textsf{list
-}(\forall a.a\to a)$, wraps the argument in a type abstraction.
+}(\forall a.a\to a)$, wraps it in a type abstraction.
 
 As noted in previous work on \Met, elimination and introduction of modalities is
 reminiscent of instantiation and generalisation in type inference~\cite[Section
@@ -388,6 +388,7 @@ indicates type application.
 \sam{I think this syntax is probably fine, but we should probably say something
   about switching to an ASCII syntax for the surface languages.}
 \[
+\small
 \bl
 \Lambda a^{\textsf{Any}}.\,
   \bl
@@ -469,8 +470,8 @@ The type inference rule for lambda abstractions introduces a fresh type variable
 for the argument. As the system lacks kind inference, the kind of this variable
 is \textsf{Any} to be permissive. Consequently, functions that require their
 argument to be pure need to appear in a context that specifies the kind of the
-argument. For instance, the \lstinline[style=metl]{find} function above does not
-type check without the top-level annotation, which makes the function
+argument's type. For instance, the \lstinline[style=metl]{find} function above
+does not type check without the top-level annotation, which makes the function
 polymorphic in a pure type variable.
 
 \sam{This explanation is too fuzzy. I don't know what aspect of the type
